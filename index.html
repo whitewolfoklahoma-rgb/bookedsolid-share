@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookedSolid — Appointment Book for Small Service Businesses</title>
+<style>
+:root{
+  --ink:#1d2733; --muted:#64748b; --line:#dbe3ec; --bg:#f4f6f9; --card:#ffffff;
+  --brand:#0f766e; --brand2:#115e59; --accent:#f59e0b; --danger:#dc2626;
+  --ok:#15803d; --warn:#b45309; --radius:12px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); font-size:15px; line-height:1.45;}
+header.top{background:var(--brand2); color:#fff; padding:12px 16px; position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+header.top .logo{font-weight:800; font-size:19px; letter-spacing:.2px;}
+header.top .biz{opacity:.85; font-size:13px;}
+header.top .tag{margin-left:auto; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.35);
+  padding:3px 9px; border-radius:999px; font-size:12px;}
+nav.tabs{display:flex; gap:4px; background:#fff; border-bottom:1px solid var(--line);
+  position:sticky; top:53px; z-index:39; overflow-x:auto; padding:6px 8px;}
+nav.tabs button{flex:1 0 auto; border:1px solid transparent; background:transparent; padding:9px 12px;
+  border-radius:9px; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; min-height:42px;}
+nav.tabs button.active{background:var(--brand); color:#fff;}
+main{max-width:980px; margin:0 auto; padding:14px 12px 70px;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px; margin-bottom:12px;}
+h2{font-size:17px; margin:2px 0 10px;} h3{font-size:15px; margin:14px 0 8px;}
+.small{font-size:12.5px; color:var(--muted);}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--brand);
+  background:var(--brand); color:#fff; padding:9px 14px; border-radius:9px; font-size:14px; font-weight:600;
+  cursor:pointer; min-height:42px; text-decoration:none;}
+.btn.secondary{background:#fff; color:var(--brand);}
+.btn.ghost{background:#fff; color:var(--ink); border-color:var(--line);}
+.btn.danger{background:var(--danger); border-color:var(--danger);}
+.btn.small{min-height:36px; padding:6px 10px; font-size:13px;min-height:40px;}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+.btnrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+input,select,textarea{width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px;
+  font-size:15px; background:#fff; color:var(--ink); min-height:42px;}
+textarea{min-height:70px; resize:vertical;}
+label{display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin:10px 0 4px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr;}}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden;}
+.seg button{border:none; background:#fff; padding:8px 14px; font-weight:600; font-size:13.5px; cursor:pointer; color:var(--muted); min-height:38px;}
+.seg button.active{background:var(--brand); color:#fff;}
+.datebar{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+.datebar .cur{font-weight:800; font-size:16px;}
+.appt{border:1px solid var(--line); border-left:6px solid var(--brand); border-radius:10px;
+  padding:10px 12px; margin-bottom:8px; background:#fff; cursor:pointer;}
+.appt .t{font-weight:700;}
+.appt .meta{font-size:13px; color:var(--muted);}
+.appt .row{display:flex; justify-content:space-between; gap:8px; align-items:flex-start;}
+.pill{display:inline-block; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:700; color:#fff;}
+.pill.booked{background:#2563eb;} .pill.confirmed{background:var(--brand);}
+.pill.done{background:var(--ok);} .pill.noshow{background:var(--danger);}
+.pill.cancelled{background:#94a3b8;} .pill.unpaid{background:var(--warn);}
+.pill.paid{background:var(--ok);} .pill.flag{background:var(--danger);}
+.gapnote{font-size:12.5px; color:var(--muted); text-align:center; padding:3px 0 9px;}
+.closed{background:#f1f5f9; border:1px dashed var(--line); border-radius:10px; padding:14px; text-align:center; color:var(--muted);}
+.weekgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+.weekcol{background:#fff; border:1px solid var(--line); border-radius:10px; padding:7px; min-height:110px; cursor:pointer;}
+.weekcol.today{border-color:var(--brand); box-shadow:0 0 0 1px var(--brand) inset;}
+.weekcol .dow{font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;}
+.weekcol .dnum{font-weight:800; font-size:15px;}
+.weekcol .mini{font-size:11px; border-radius:5px; color:#fff; padding:2px 5px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+@media(max-width:640px){.weekgrid{grid-template-columns:1fr;} .weekcol{min-height:0;}}
+.monthgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+.mcell{background:#fff; border:1px solid var(--line); border-radius:9px; min-height:64px; padding:5px; cursor:pointer; font-size:12px;}
+.mcell.dim{opacity:.4;} .mcell.today{border-color:var(--brand); box-shadow:0 0 0 1px var(--brand) inset;}
+.mcell .dnum{font-weight:700;}
+.mcell .cnt{color:var(--brand2); font-weight:700;}
+.mcell .rev{color:var(--muted);}
+.modal{position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:80; display:flex; align-items:flex-end; justify-content:center;}
+@media(min-width:700px){.modal{align-items:center;}}
+.modal .box{background:#fff; border-radius:16px 16px 0 0; width:100%; max-width:640px; max-height:92vh;
+  overflow-y:auto; padding:18px;}
+@media(min-width:700px){.modal .box{border-radius:16px;}}
+.modal h2{margin-top:0;}
+.hide{display:none !important;}
+.warnbox{background:#fef3c7; border:1px solid #f59e0b; border-radius:10px; padding:10px 12px; margin:10px 0; font-size:14px;}
+.errbox{background:#fee2e2; border:1px solid #fca5a5; border-radius:10px; padding:10px 12px; margin:10px 0; font-size:14px;}
+.okbox{background:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:10px 12px; margin:10px 0; font-size:14px;}
+table{width:100%; border-collapse:collapse; font-size:14px;}
+.tblwrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+th,td{text-align:left; padding:7px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
+th{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;}
+.kpi{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px;}
+.kpi .k{background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px;}
+.kpi .k .v{font-size:21px; font-weight:800;}
+.kpi .k .l{font-size:12px; color:var(--muted); font-weight:600;}
+.toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:#fff;
+  padding:11px 18px; border-radius:999px; font-size:14px; z-index:99; box-shadow:0 6px 24px rgba(0,0,0,.25); max-width:92vw; text-align:center;}
+.swatch{display:inline-block; width:14px; height:14px; border-radius:4px; vertical-align:-2px; margin-right:6px;}
+.checkrow{display:flex; align-items:center; gap:8px; margin:8px 0;}
+.checkrow input{width:auto; min-height:0;}
+.dayoffrow{display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--line);}
+.dayoffrow .dname{width:96px; font-weight:700;}
+footer{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); font-size:12.5px;}
+@media print{
+  header.top, nav.tabs, .noprint, .btn, footer{display:none !important;}
+  body{background:#fff;} main{max-width:none; padding:0;}
+  .card{border:none; padding:0;}
+  .appt{break-inside:avoid; border:1px solid #999; border-left:6px solid #333;}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="logo">📅 BookedSolid</div>
+    <div class="biz" id="hdrBiz">Your appointment book</div>
+  </div>
+  <div class="tag">Offline · No subscription · Your data stays yours</div>
+</header>
+<div style="text-align:center;padding:12px 16px;background:#fff8e6;border-bottom:2px solid #e8a13a;"><a href="https://travisbriggs.gumroad.com/l/mlfogb" target="_blank" rel="noopener" style="display:inline-block;background:#e8a13a;color:#1d2b2e;font-weight:800;font-size:17px;padding:10px 22px;border-radius:8px;text-decoration:none;">Get the full version — $79</a></div>
+
+<nav class="tabs" id="tabBar">
+  <button data-tab="calendar" class="active">Calendar</button>
+  <button data-tab="book">+ Book</button>
+  <button data-tab="clients">Clients</button>
+  <button data-tab="waitlist">Waitlist</button>
+  <button data-tab="money">Money</button>
+  <button data-tab="packs">Packs</button>
+  <button data-tab="settings">Settings &amp; Help</button>
+</nav>
+<main>
+  <section id="view-calendar"></section>
+  <section id="view-book" class="hide"></section>
+  <section id="view-clients" class="hide"></section>
+  <section id="view-waitlist" class="hide"></section>
+  <section id="view-money" class="hide"></section>
+  <section id="view-packs" class="hide"></section>
+  <section id="view-settings" class="hide"></section>
+</main>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.</footer>
+<script>
+"use strict";
+/* ============================== utilities ============================== */
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function uid(){return "id"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function pad2(n){return String(n).padStart(2,"0");}
+function dstr(d){return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());}
+function todayStr(){return dstr(new Date());}
+function parseDate(s){const p=String(s||"").split("-");return new Date(+p[0],(+p[1]||1)-1,+p[2]||1);}
+function addDays(s,n){const d=parseDate(s);d.setDate(d.getDate()+n);return dstr(d);}
+function dowOf(s){return parseDate(s).getDay();} // 0=Sun
+const DOWS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DOWS3=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function fmtDate(s){if(!s)return"";const d=parseDate(s);return DOWS3[d.getDay()]+", "+MONTHS[d.getMonth()].slice(0,3)+" "+d.getDate()+", "+d.getFullYear();}
+function fmtDateLong(s){if(!s)return"";const d=parseDate(s);return DOWS[d.getDay()]+", "+MONTHS[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();}
+function toMin(t){if(!t)return 0;const p=String(t).split(":");return (+p[0])*60+(+p[1]||0);}
+function toTime(m){m=Math.max(0,Math.round(m));const h=Math.floor(m/60),mm=m%60;const ap=h>=12?"PM":"AM";let hh=h%12;if(hh===0)hh=12;return hh+":"+pad2(mm)+" "+ap;}
+function money(n){n=Number(n)||0;return "$"+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function num(v,dflt){const n=parseFloat(v);return isNaN(n)?(dflt||0):n;}
+function toast(msg){const r=$("#toastRoot");r.innerHTML='<div class="toast">'+esc(msg)+"</div>";setTimeout(()=>{r.innerHTML="";},2600);}
+
+/* ============================== state ============================== */
+const LS_KEY="bookedsolid_v1";
+let S=null;
+function defaultHours(){const h={};for(let d=0;d<7;d++){h[d]={open:d!==0,start:"09:00",end:"17:00",breaks:[]};}
+  h[6]={open:true,start:"09:00",end:"15:00",breaks:[]};return h;}
+function defaultState(){return {
+  settings:{businessName:"",phone:"",email:"",ownerName:"",slotStep:15,defaultView:"day"},
+  hours:defaultHours(),
+  services:[],clients:[],appointments:[],waitlist:[],
+  templates:[
+    {id:"tpl_confirm",name:"Booking confirmation",builtin:true,body:"Hi {name}, this is {business} confirming your {service} on {date} at {time}. Total is {price}. Please reply to confirm — see you then!"},
+    {id:"tpl_remind",name:"Day-before reminder",builtin:true,body:"Hi {name}, friendly reminder from {business}: your {service} is tomorrow, {date} at {time}. If you need to reschedule, please let us know today so we can offer the spot to someone on our waitlist. Thanks!"},
+    {id:"tpl_deposit",name:"Deposit request (polite)",builtin:true,body:"Hi {name}, you're booked for {service} on {date} at {time} with {business}. To hold the spot we ask a {deposit} deposit — you can send it the way we discussed. It comes off your {price} total. Thanks for understanding!"}
+  ],
+  packs:[],presetLoaded:"",demoLoaded:false
+};}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const raw=localStorage.getItem(LS_KEY);if(raw){const p=JSON.parse(raw);
+  if(p&&typeof p==="object"&&p.settings){S=Object.assign(defaultState(),p);
+    S.settings=Object.assign(defaultState().settings,p.settings||{});
+    if(!S.hours)S.hours=defaultHours();return;}}}catch(e){}
+  S=defaultState();}
+
+/* ============================== presets ============================== */
+const PRESETS={
+ generic:{label:"Generic service business",services:[
+   {name:"Standard Appointment",duration:60,buffer:10,price:75,color:"#0f766e"},
+   {name:"Quick Service (30 min)",duration:30,buffer:5,price:40,color:"#2563eb"},
+   {name:"Extended Session (90 min)",duration:90,buffer:15,price:120,color:"#7c3aed"}]},
+ cleaning:{label:"House / commercial cleaning",services:[
+   {name:"Standard Home Clean",duration:120,buffer:30,price:160,color:"#0f766e"},
+   {name:"Deep Clean",duration:240,buffer:45,price:320,color:"#7c3aed"},
+   {name:"Move-Out Clean",duration:300,buffer:45,price:390,color:"#b45309"},
+   {name:"Recurring Biweekly Clean",duration:120,buffer:30,price:140,color:"#2563eb"}]},
+ detailing:{label:"Auto detailing (mobile)",services:[
+   {name:"Exterior Wash & Wax",duration:60,buffer:20,price:85,color:"#2563eb"},
+   {name:"Interior Detail",duration:120,buffer:20,price:150,color:"#0f766e"},
+   {name:"Full Detail (In & Out)",duration:210,buffer:30,price:275,color:"#7c3aed"},
+   {name:"Ceramic Coating",duration:360,buffer:30,price:650,color:"#b45309"}]},
+ salon:{label:"Salon / barber",services:[
+   {name:"Haircut",duration:45,buffer:10,price:45,color:"#2563eb"},
+   {name:"Cut & Beard Trim",duration:60,buffer:10,price:60,color:"#0f766e"},
+   {name:"Color — Single Process",duration:120,buffer:15,price:140,color:"#b565d8"},
+   {name:"Balayage / Highlights",duration:180,buffer:15,price:220,color:"#db2777"},
+   {name:"Kids Cut (12 & under)",duration:30,buffer:5,price:30,color:"#0891b2"}]},
+ handyman:{label:"Handyman / home repair",services:[
+   {name:"Service Call (first hour)",duration:60,buffer:30,price:95,color:"#b45309"},
+   {name:"Half-Day Block (4 hrs)",duration:240,buffer:30,price:340,color:"#0f766e"},
+   {name:"Full-Day Block (8 hrs)",duration:480,buffer:30,price:620,color:"#7c3aed"},
+   {name:"Estimate Visit",duration:30,buffer:20,price:0,color:"#64748b"}]},
+ training:{label:"Personal training / lessons",services:[
+   {name:"1-on-1 Session",duration:60,buffer:10,price:70,color:"#dc2626"},
+   {name:"Partner Session (2 people)",duration:60,buffer:10,price:110,color:"#0f766e"},
+   {name:"Intro / Assessment",duration:45,buffer:10,price:40,color:"#2563eb"},
+   {name:"30-Minute Express",duration:30,buffer:5,price:45,color:"#0891b2"}]}
+};
+
+/* ============================== core logic (window.BS) ============================== */
+function svcById(id){return S.services.find(s=>s.id===id);}
+function clientById(id){return S.clients.find(c=>c.id===id);}
+function apptEndMin(a){return toMin(a.start)+ (Number(a.duration)||0) + (Number(a.buffer)||0);}
+function apptServiceEndMin(a){return toMin(a.start)+(Number(a.duration)||0);}
+function dayAppts(date){return S.appointments.filter(a=>a.date===date&&a.status!=="cancelled")
+  .sort((x,y)=>toMin(x.start)-toMin(y.start));}
+/* Conflict check: candidate {date,start,duration,buffer,excludeId}
+   Block occupied = [start, start+duration+buffer). Returns {conflicts:[], hoursIssues:[]} */
+function checkConflicts(cand){
+  const cs=toMin(cand.start), ce=cs+(Number(cand.duration)||0)+(Number(cand.buffer)||0);
+  const conflicts=[];
+  for(const a of S.appointments){
+    if(a.date!==cand.date||a.status==="cancelled"||a.id===cand.excludeId)continue;
+    const as=toMin(a.start), ae=apptEndMin(a);
+    if(cs<ae&&as<ce)conflicts.push(a);
+  }
+  const hoursIssues=[];
+  const h=S.hours[dowOf(cand.date)];
+  if(!h||!h.open){hoursIssues.push("Your business is marked CLOSED on "+DOWS[dowOf(cand.date)]+"s.");}
+  else{
+    const hs=toMin(h.start), he=toMin(h.end);
+    if(cs<hs)hoursIssues.push("Starts before you open ("+toTime(hs)+").");
+    if(ce>he)hoursIssues.push("Runs past closing ("+toTime(he)+") including buffer time.");
+    for(const b of (h.breaks||[])){
+      const bs=toMin(b.start), be=toMin(b.end);
+      if(cs<be&&bs<ce)hoursIssues.push("Overlaps your break ("+toTime(bs)+"–"+toTime(be)+").");
+    }
+  }
+  return {conflicts,hoursIssues};
+}
+function fillTemplate(body,a){
+  const c=a?clientById(a.clientId):null, biz=S.settings.businessName||"us";
+  const map={"{name}":c?c.name.split(" ")[0]:"there","{fullname}":c?c.name:"",
+    "{service}":a?a.serviceName:"","{date}":a?fmtDateLong(a.date):"",
+    "{time}":a?toTime(toMin(a.start)):"","{business}":biz,
+    "{price}":a?money(a.price):"","{deposit}":a&&a.deposit?money(a.deposit.amount):"$0"};
+  let out=String(body||"");
+  for(const k in map)out=out.split(k).join(map[k]);
+  return out;
+}
+function clientStats(clientId){
+  const list=S.appointments.filter(a=>a.clientId===clientId);
+  let spend=0,noshows=0,visits=0;
+  for(const a of list){if(a.status==="done"){visits++;if(a.paid)spend+=Number(a.price)||0;}
+    if(a.status==="no-show")noshows++;}
+  return {spend,noshows,visits,total:list.length};
+}
+function moneyReport(from,to){
+  const inR=a=>a.date>=from&&a.date<=to;
+  let booked=0,completed=0,noshowLoss=0,noshowCount=0,apptCount=0;
+  const byService={};
+  for(const a of S.appointments){
+    if(!inR(a)||a.status==="cancelled")continue;
+    apptCount++;
+    if(a.status==="no-show"){noshowLoss+=Number(a.price)||0;noshowCount++;}
+    else{booked+=Number(a.price)||0;
+      if(a.status==="done")completed+=Number(a.price)||0;
+      const k=a.serviceName||"Service";byService[k]=(byService[k]||0)+1;}
+  }
+  const top=Object.keys(byService).map(k=>({name:k,count:byService[k]})).sort((x,y)=>y.count-x.count);
+  return {booked,completed,noshowLoss,noshowCount,apptCount,top};
+}
+function stillOwed(a){
+  if(!a||a.paid||a.status==="cancelled")return 0;
+  const owed=(Number(a.price)||0)-((a.deposit&&Number(a.deposit.amount))||0);
+  return owed>0?owed:0;
+}
+function totalStillOwed(){
+  return S.appointments.reduce((t,a)=>t+stillOwed(a),0);
+}
+function fitWaitlist(freed){
+  // freed: {date, startMin, blockMin} — who could take this slot?
+  const dow=dowOf(freed.date);
+  return S.waitlist.filter(w=>{
+    const need=(Number(w.duration)||0)+(Number(w.buffer)||0);
+    const dayOk=!w.preferDays||w.preferDays.length===0||w.preferDays.indexOf(dow)>=0;
+    return dayOk&&need<=freed.blockMin;
+  });
+}
+window.BS={checkConflicts,apptEndMin,apptServiceEndMin,fillTemplate,clientStats,moneyReport,stillOwed,totalStillOwed,fitWaitlist,toMin,toTime,money,PRESETS};
+</script>
+<script>
+"use strict";
+/* ============================== demo data ============================== */
+const SAMPLE_PACK={
+  format:"bookedsolid-pack-v1", packName:"Sample Mini-Pack (included free)",
+  services:[{name:"Paint Protection Check (Add-On)",duration:30,buffer:10,price:49,color:"#0891b2"}],
+  reminderTemplates:[{name:"Add-on upsell text",body:"Hi {name}, quick note from {business} — while we're out for your {service} on {date}, we can also do a paint protection check for $49. Just reply YES and we'll add it on. No pressure either way!"}],
+  intakeQuestions:[{service:"Paint Protection Check (Add-On)",question:"Has the vehicle ever been ceramic coated or wrapped?"}]
+};
+function importPack(pack,quiet){
+  if(!pack||pack.format!=="bookedsolid-pack-v1")throw new Error("That file is not a bookedsolid-pack-v1 pack.");
+  const rec={id:uid(),name:pack.packName||"Unnamed pack",importedAt:todayStr(),
+    services:[],templates:[],questions:pack.intakeQuestions||[]};
+  (pack.services||[]).forEach(sv=>{
+    const s={id:uid(),name:String(sv.name||"Pack service"),duration:num(sv.duration,60),
+      buffer:num(sv.buffer,0),price:num(sv.price,0),color:sv.color||"#0f766e",pack:rec.name};
+    S.services.push(s);rec.services.push(s.id);});
+  (pack.reminderTemplates||[]).forEach(t=>{
+    const t2={id:uid(),name:String(t.name||"Pack template"),body:String(t.body||""),pack:rec.name};
+    S.templates.push(t2);rec.templates.push(t2.id);});
+  S.packs.push(rec);
+  if(!quiet)toast("Pack imported: "+rec.name);
+  return rec;
+}
+function seedDemo(){
+  if(S.demoLoaded)return;
+  S.settings.businessName="Shine Mobile Detailing";
+  S.settings.phone="(555) 014-2280";
+  PRESETS.detailing.services.forEach(sv=>S.services.push(Object.assign({id:uid()},sv)));
+  const clients=[
+    {id:uid(),name:"Marcus Hill",phone:"(555) 201-4471",notes:"Two SUVs. Gate code 4417. Prefers mornings."},
+    {id:uid(),name:"Priya Nair",phone:"(555) 882-1093",notes:"New client from Google. Has a dog — pet hair likely."},
+    {id:uid(),name:"Tom Beckett",phone:"(555) 340-7756",notes:"Regular since March. Pays cash."},
+    {id:uid(),name:"Alisha Grant",phone:"(555) 617-9032",notes:"⚠ No-showed once in September. Ask for a deposit on big jobs."}
+  ];
+  S.clients.push.apply(S.clients,clients);
+  const svc=n=>S.services.find(s=>s.name===n);
+  const monday=addDays(todayStr(),-( (dowOf(todayStr())+6)%7 ));
+  function mk(ci,svName,off,start,status,extra){
+    const sv=svc(svName);const a={id:uid(),clientId:clients[ci].id,serviceId:sv.id,
+      serviceName:sv.name,price:sv.price,duration:sv.duration,buffer:sv.buffer,
+      date:addDays(monday,off),start:start,status:status||"booked",
+      deposit:{amount:0,method:""},paid:false,notes:"",seriesId:""};
+    if(extra)Object.assign(a,extra);S.appointments.push(a);return a;}
+  mk(0,"Full Detail (In & Out)",0,"09:00","done",{paid:true});
+  mk(2,"Exterior Wash & Wax",1,"10:00","done",{paid:true});
+  mk(3,"Interior Detail",2,"13:00","no-show",{deposit:{amount:25,method:"Cash App"}});
+  mk(1,"Full Detail (In & Out)",3,"09:30","confirmed",{deposit:{amount:50,method:"Card on file (recorded)"}});
+  mk(0,"Ceramic Coating",5,"08:00","booked",{deposit:{amount:100,method:"Venmo"}});
+  mk(2,"Interior Detail",6,"11:00","booked");
+  S.waitlist.push({id:uid(),clientId:clients[1].id,clientName:clients[1].name,
+    serviceName:"Full Detail (In & Out)",duration:210,buffer:30,
+    preferDays:[6,0],notes:"Weekend only — works weekdays. Asked twice, be quick if a Saturday opens."});
+  try{importPack(JSON.parse(JSON.stringify(SAMPLE_PACK)),true);}catch(e){}
+  S.presetLoaded="detailing";S.demoLoaded=true;save();
+}
+
+/* ============================== navigation ============================== */
+let curTab="calendar", calView="day", calDate=todayStr();
+function showTab(t){
+  curTab=t;
+  $$("#tabBar button").forEach(b=>b.classList.toggle("active",b.dataset.tab===t));
+  ["calendar","book","clients","waitlist","money","packs","settings"].forEach(v=>{
+    $("#view-"+v).classList.toggle("hide",v!==t);});
+  if(t==="calendar")renderCalendar();
+  if(t==="book")renderBook();
+  if(t==="clients")renderClients();
+  if(t==="waitlist")renderWaitlist();
+  if(t==="money")renderMoney();
+  if(t==="packs")renderPacks();
+  if(t==="settings")renderSettings();
+  window.scrollTo(0,0);
+}
+$("#tabBar").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(b)showTab(b.dataset.tab);});
+function openModal(html){$("#modalRoot").innerHTML='<div class="modal"><div class="box">'+html+"</div></div>";
+  $("#modalRoot .modal").addEventListener("click",e=>{if(e.target.classList.contains("modal"))closeModal();});}
+function closeModal(){$("#modalRoot").innerHTML="";}
+
+/* ============================== calendar views ============================== */
+function statusPill(a){
+  const names={booked:"Booked",confirmed:"Confirmed",done:"Done","no-show":"No-show",cancelled:"Cancelled"};
+  return '<span class="pill '+a.status+'">'+names[a.status]+"</span>";}
+function apptCard(a){
+  const c=clientById(a.clientId);
+  const end=apptServiceEndMin(a), bend=apptEndMin(a);
+  return '<div class="appt" style="border-left-color:'+esc(colorOf(a))+'" data-appt="'+a.id+'">'+
+   '<div class="row"><div><span class="t">'+toTime(toMin(a.start))+" – "+toTime(end)+'</span> '+
+   '<span class="small">(incl. buffer to '+toTime(bend)+')</span><br><b>'+esc(a.serviceName)+'</b> — '+
+   esc(c?c.name:"(deleted client)")+'</div><div>'+statusPill(a)+'<br><span class="small">'+money(a.price)+
+   (a.paid?' · <span style="color:var(--ok);font-weight:700">Paid</span>':' · <span style="color:var(--warn);font-weight:700">Unpaid</span>')+"</span></div></div>"+
+   (a.notes?'<div class="meta">📝 '+esc(a.notes.slice(0,120))+"</div>":"")+
+   (a.deposit&&a.deposit.amount>0?'<div class="meta">💵 Deposit recorded: '+money(a.deposit.amount)+(a.deposit.method?" via "+esc(a.deposit.method):"")+"</div>":"")+
+   '<div class="meta">💰 Still owed: '+money(stillOwed(a))+"</div>"+
+   "</div>";
+}
+function colorOf(a){const s=svcById(a.serviceId);return s?s.color:"#0f766e";}
+function renderCalendar(){
+  const el=$("#view-calendar");
+  const dows=dowOf(calDate);
+  let nav="";
+  if(calView==="day")nav=fmtDateLong(calDate);
+  else if(calView==="week"){const m=addDays(calDate,-((dows+6)%7));
+    nav="Week of "+fmtDate(m)+" – "+fmtDate(addDays(m,6));}
+  else{const d=parseDate(calDate);nav=MONTHS[d.getMonth()]+" "+d.getFullYear();}
+  let html="";
+  if(S.demoLoaded)html+='<div class="warnbox noprint">🧪 <b>Sample data:</b> you\'re looking at a demo business — <b>Shine Mobile Detailing</b> — with sample clients and appointments so you can see how everything works. It is not your real book yet. '+
+    '<span class="btnrow" style="margin-top:6px"><button class="btn ghost small" id="calClearDemo">Clear sample data</button></span></div>';
+  html+='<div class="card"><div class="datebar">'+
+    '<button class="btn ghost small" id="calPrev">◀</button>'+
+    '<button class="btn ghost small" id="calToday">Today</button>'+
+    '<button class="btn ghost small" id="calNext">▶</button>'+
+    '<span class="cur">'+esc(nav)+"</span>"+
+    '<span style="margin-left:auto" class="seg">'+
+    ["day","week","month"].map(v=>'<button data-cv="'+v+'" class="'+(calView===v?"active":"")+'">'+v[0].toUpperCase()+v.slice(1)+"</button>").join("")+
+    "</span></div>";
+  if(calView==="day")html+=dayHtml(calDate);
+  else if(calView==="week")html+=weekHtml(calDate);
+  else html+=monthHtml(calDate);
+  html+="</div>";
+  el.innerHTML=html;
+  const calCd=$("#calClearDemo");
+  if(calCd)calCd.onclick=()=>{if(!confirm("Remove all demo data? Your real entries stay."))return;
+    clearDemo();$("#hdrBiz").textContent=S.settings.businessName||"Your appointment book";
+    renderCalendar();toast("Demo data cleared — the book is yours now");};
+  $("#calPrev").onclick=()=>{if(calView==="month"){const d=parseDate(calDate);calDate=dstr(new Date(d.getFullYear(),d.getMonth()-1,1));}
+    else calDate=addDays(calDate,calView==="week"?-7:-1);renderCalendar();};
+  $("#calNext").onclick=()=>{if(calView==="month"){const d=parseDate(calDate);calDate=dstr(new Date(d.getFullYear(),d.getMonth()+1,1));}
+    else calDate=addDays(calDate,calView==="week"?7:1);renderCalendar();};
+  $("#calToday").onclick=()=>{calDate=todayStr();renderCalendar();};
+  $$(".seg button",el).forEach(b=>b.onclick=()=>{calView=b.dataset.cv;renderCalendar();});
+  $$("[data-appt]",el).forEach(n=>n.onclick=()=>openAppt(n.dataset.appt));
+  $$("[data-goday]",el).forEach(n=>n.onclick=()=>{calDate=n.dataset.goday;calView="day";renderCalendar();});
+}
+function dayHtml(date){
+  const h=S.hours[dowOf(date)];
+  if(!h||!h.open)return '<div class="closed">Closed on '+DOWS[dowOf(date)]+'s (set in Settings).<br>'+
+    '<span class="small">You can still book with an override if you\'re making an exception.</span></div>'+
+    dayList(date);
+  return dayList(date);
+}
+function dayList(date){
+  const list=dayAppts(date);
+  if(!list.length)return '<div class="closed">No appointments on '+fmtDate(date)+'.</div>'+
+    '<div class="btnrow"><button class="btn" onclick="quickBook(\''+date+'\')">+ Book this day</button></div>';
+  let html="",prevEnd=null;
+  const h=S.hours[dowOf(date)];
+  for(const a of list){
+    if(h&&h.open&&prevEnd!==null&&toMin(a.start)>prevEnd)
+      html+='<div class="gapnote">— free: '+toTime(prevEnd)+" to "+toTime(toMin(a.start))+" —</div>";
+    if(h&&h.open&&prevEnd===null&&toMin(a.start)>toMin(h.start))
+      html+='<div class="gapnote">— free from open ('+toTime(toMin(h.start))+") to "+toTime(toMin(a.start))+" —</div>";
+    html+=apptCard(a);prevEnd=Math.max(prevEnd||0,apptEndMin(a));
+  }
+  html+='<div class="btnrow noprint"><button class="btn secondary" onclick="quickBook(\''+date+'\')">+ Book this day</button>'+
+    '<button class="btn ghost" onclick="printDay()">🖨 Print day sheet</button></div>';
+  return html;
+}
+function weekHtml(anchor){
+  const m=addDays(anchor,-((dowOf(anchor)+6)%7));
+  let html='<div class="weekgrid">';
+  for(let i=0;i<7;i++){const d=addDays(m,i);const list=dayAppts(d);
+    const rev=list.reduce((t,a)=>t+(a.status==="no-show"?0:(Number(a.price)||0)),0);
+    html+='<div class="weekcol'+(d===todayStr()?" today":"")+'" data-goday="'+d+'">'+
+      '<div class="dow">'+DOWS3[dowOf(d)]+'</div><div class="dnum">'+parseDate(d).getDate()+"</div>"+
+      list.slice(0,4).map(a=>'<div class="mini" style="background:'+esc(colorOf(a))+'">'+toTime(toMin(a.start))+" "+esc(a.serviceName)+"</div>").join("")+
+      (list.length>4?'<div class="small">+'+(list.length-4)+" more</div>":"")+
+      (list.length?'<div class="small" style="margin-top:4px">'+money(rev)+" booked</div>":'<div class="small">—</div>')+
+      "</div>";}
+  return html+"</div>";
+}
+function monthHtml(anchor){
+  const d=parseDate(anchor);const first=dstr(new Date(d.getFullYear(),d.getMonth(),1));
+  const startOff=(dowOf(first)+6)%7;const gridStart=addDays(first,-startOff);
+  let html='<div class="monthgrid">';
+  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(x=>html+='<div class="small" style="font-weight:700;text-align:center">'+x+"</div>");
+  for(let i=0;i<42;i++){const ds=addDays(gridStart,i);const list=dayAppts(ds);
+    const inMonth=parseDate(ds).getMonth()===d.getMonth();
+    const rev=list.reduce((t,a)=>t+(a.status==="no-show"?0:(Number(a.price)||0)),0);
+    html+='<div class="mcell'+(inMonth?"":" dim")+(ds===todayStr()?" today":"")+'" data-goday="'+ds+'">'+
+      '<div class="dnum">'+parseDate(ds).getDate()+"</div>"+
+      (list.length?'<div class="cnt">'+list.length+" appt"+(list.length>1?"s":"")+'</div><div class="rev">'+money(rev)+"</div>":"")+
+      "</div>";}
+  return html+"</div>";
+}
+function quickBook(date){showTab("book");const di=$("#bkDate");if(di)di.value=date;}
+function printDay(){calView="day";renderCalendar();setTimeout(()=>window.print(),50);}
+</script>
+<script>
+"use strict";
+/* ============================== appointment detail ============================== */
+function openAppt(id){
+  const a=S.appointments.find(x=>x.id===id);if(!a)return;
+  const c=clientById(a.clientId);const st=clientStats(a.clientId);
+  const tplOpts=S.templates.map(t=>'<option value="'+t.id+'">'+esc(t.name)+"</option>").join("");
+  openModal("<h2>"+esc(a.serviceName)+"</h2>"+
+   '<p class="small" style="margin-top:-6px">'+fmtDateLong(a.date)+" · "+toTime(toMin(a.start))+
+   " – "+toTime(apptServiceEndMin(a))+" (buffer to "+toTime(apptEndMin(a))+")</p>"+
+   "<table>"+
+   "<tr><th>Client</th><td><b>"+esc(c?c.name:"(deleted)")+"</b>"+(c?" · "+esc(c.phone):"")+
+   (st.noshows>=2?' <span class="pill flag">⚠ '+st.noshows+" no-shows</span>":st.noshows===1?' <span class="pill noshow">1 no-show</span>':"")+"</td></tr>"+
+   "<tr><th>Price</th><td>"+money(a.price)+" · "+(a.paid?'<span class="pill paid">Paid</span>':'<span class="pill unpaid">Unpaid</span>')+"</td></tr>"+
+   "<tr><th>Deposit</th><td>"+(a.deposit&&a.deposit.amount>0?money(a.deposit.amount)+" recorded"+(a.deposit.method?" ("+esc(a.deposit.method)+")":""):"None recorded")+' <span class="small">(recorded only — BookedSolid never collects payments)</span></td></tr>'+
+   "<tr><th>Status</th><td>"+statusPill(a)+(a.seriesId?' <span class="small">part of a recurring series</span>':"")+"</td></tr>"+
+   (a.notes?"<tr><th>Notes</th><td>"+esc(a.notes)+"</td></tr>":"")+
+   "</table>"+
+   '<label>Change status</label><div class="btnrow" style="margin-top:2px">'+
+   ["booked","confirmed","done","no-show","cancelled"].map(s2=>
+     '<button class="btn '+(a.status===s2?"":"ghost")+' small" data-setstatus="'+s2+'">'+
+     ({booked:"Booked",confirmed:"Confirmed",done:"Done","no-show":"No-show",cancelled:"Cancel"})[s2]+"</button>").join("")+"</div>"+
+   (a.seriesId?'<div class="checkrow"><input type="checkbox" id="apSeries"><span>Apply status change to the whole series</span></div>':"")+
+   '<div class="btnrow"><button class="btn secondary small" id="apPaid">'+(a.paid?"Mark unpaid":"Mark paid")+"</button>"+
+   '<button class="btn ghost small" id="apEdit">Edit time / details</button>'+
+   '<button class="btn danger small" id="apDelete">Delete</button></div>'+
+   "<h3>📋 Reminder texts — tap to copy, paste into your messaging app</h3>"+
+   '<div class="grid2"><div><label>Template</label><select id="apTpl">'+tplOpts+"</select></div>"+
+   '<div style="display:flex;align-items:flex-end"><button class="btn" id="apCopy" style="width:100%">Copy text</button></div></div>'+
+   '<textarea id="apTplPreview" readonly></textarea>'+
+   '<div class="btnrow"><button class="btn ghost" onclick="closeModal()">Close</button></div>');
+  const prev=()=>{$("#apTplPreview").value=fillTemplate((S.templates.find(t=>t.id===$("#apTpl").value)||{}).body||"",a);};
+  $("#apTpl").onchange=prev;prev();
+  $("#apCopy").onclick=()=>{copyText($("#apTplPreview").value);};
+  $$("[data-setstatus]").forEach(b=>b.onclick=()=>{
+    const ns=b.dataset.setstatus;
+    const applySeries=$("#apSeries")&&$("#apSeries").checked&&a.seriesId;
+    const targets=applySeries?S.appointments.filter(x=>x.seriesId===a.seriesId&&x.date>=a.date):[a];
+    targets.forEach(x=>x.status=ns);save();
+    if(ns==="cancelled"&&!applySeries){closeModal();offerWaitlistMatch(a);renderCalendar();return;}
+    closeModal();renderCalendar();toast("Status updated"+(applySeries?" (series)":""));});
+  $("#apPaid").onclick=()=>{a.paid=!a.paid;save();closeModal();renderCalendar();};
+  $("#apDelete").onclick=()=>{if(!confirm("Delete this appointment permanently?"))return;
+    S.appointments=S.appointments.filter(x=>x.id!==a.id);save();closeModal();renderCalendar();toast("Deleted");};
+  $("#apEdit").onclick=()=>{closeModal();showTab("book");fillBookForm(a);};
+}
+function copyText(txt){
+  const done=()=>toast("Copied — paste it into your messaging app");
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
+  }else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,done){
+  const ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch(e){}
+  document.body.removeChild(ta);done();
+}
+/* When a slot frees up, offer matching waitlist clients */
+function offerWaitlistMatch(cancelled){
+  const freed={date:cancelled.date,startMin:toMin(cancelled.start),
+    blockMin:(Number(cancelled.duration)||0)+(Number(cancelled.buffer)||0)};
+  const fits=fitWaitlist(freed);
+  if(!fits.length)return;
+  openModal("<h2>⏳ That slot just opened — waitlist match</h2>"+
+   "<p>"+fmtDateLong(freed.date)+" at "+toTime(freed.startMin)+" · "+freed.blockMin+" minutes free (incl. buffer). "+
+   "These waitlist clients fit that slot:</p>"+
+   fits.map(w=>'<div class="appt" style="cursor:default"><div class="row"><div><b>'+esc(w.clientName)+"</b> — "+
+     esc(w.serviceName)+' <span class="small">('+(w.duration)+" min + "+(w.buffer||0)+' buffer)</span><br>'+
+     '<span class="meta">'+esc(w.notes||"")+"</span></div>"+
+     '<button class="btn small" data-bookin="'+w.id+'">Book in</button></div></div>').join("")+
+   '<div class="btnrow"><button class="btn ghost" onclick="closeModal()">Not now</button></div>');
+  $$("[data-bookin]").forEach(b=>b.onclick=()=>{
+    const w=S.waitlist.find(x=>x.id===b.dataset.bookin);if(!w)return;
+    const sv=S.services.find(s=>s.name===w.serviceName);
+    const na={id:uid(),clientId:w.clientId,serviceId:sv?sv.id:"",
+      serviceName:w.serviceName,price:sv?sv.price:0,duration:w.duration,buffer:w.buffer||0,
+      date:freed.date,start:pad2(Math.floor(freed.startMin/60))+":"+pad2(freed.startMin%60),
+      status:"booked",deposit:{amount:0,method:""},paid:false,
+      notes:"Booked in from the waitlist after a cancellation.",seriesId:""};
+    S.appointments.push(na);
+    S.waitlist=S.waitlist.filter(x=>x.id!==w.id);
+    save();closeModal();renderCalendar();
+    toast("Booked in "+w.clientName+" — send them the confirmation text from the appointment.");});
+}
+
+/* ============================== booking form ============================== */
+let bkIntake={};
+function renderBook(prefill){
+  const el=$("#view-book");
+  const svcOpts=S.services.map(s=>'<option value="'+s.id+'">'+esc(s.name)+" — "+s.duration+" min · "+money(s.price)+(s.pack?" · 📦 "+esc(s.pack):"")+"</option>").join("");
+  const cliOpts=S.clients.map(c=>'<option value="'+c.id+'">'+esc(c.name)+"</option>").join("");
+  el.innerHTML='<div class="card"><h2>'+(prefill?"Edit appointment":"Book an appointment")+"</h2>"+
+   (S.services.length===0?'<div class="warnbox">You have no services yet. Load a starter preset in Settings, add a service below, or a pack in the Packs tab.</div>':"")+
+   '<div class="grid3"><div><label>Client</label><select id="bkClient">'+cliOpts+'</select></div>'+
+   '<div><label>…or new client name</label><input id="bkNewClient" placeholder="Type name to create a new client"></div>'+
+   '<div><label>New client phone (for reminder texts)</label><input id="bkNewClientPhone" type="tel" placeholder="(555) 000-0000"></div></div>'+
+   '<label>Service</label><select id="bkService">'+svcOpts+"</select>"+
+   '<div id="bkIntake"></div>'+
+   '<div class="grid3"><div><label>Date</label><input type="date" id="bkDate" value="'+todayStr()+'"></div>'+
+   '<div><label>Start time</label><input type="time" id="bkStart" value="09:00"></div>'+
+   '<div><label>Price ($)</label><input inputmode="decimal" type="number" id="bkPrice" min="0" step="0.01"></div></div>'+
+   '<div class="grid3"><div><label>Deposit recorded ($)</label><input inputmode="decimal" type="number" id="bkDepAmt" min="0" step="0.01" value="0"></div>'+
+   '<div><label>Deposit method (how they paid you)</label><input id="bkDepMethod" placeholder="Cash, Venmo, card on file…"></div>'+
+   '<div><label>Repeats</label><select id="bkRepeat"><option value="">One-time</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option></select></div></div>'+
+   '<div id="bkRepeatN"><label>How many appointments in the series?</label><input inputmode="decimal" type="number" id="bkCount" min="2" max="52" value="8"></div>'+
+   '<div class="checkrow"><input type="checkbox" id="bkPaid"><span>Already paid in full</span></div>'+
+   '<label>Notes</label><textarea id="bkNotes" placeholder="Address, gate code, client requests…"></textarea>'+
+   '<div id="bkWarn"></div>'+
+   '<div class="btnrow"><button class="btn" id="bkSave">'+(prefill?"Save changes":"Check & book")+'</button>'+
+   (prefill?'<button class="btn ghost" id="bkCancelEdit">Cancel edit</button>':"")+"</div>"+
+   '<p class="small">BookedSolid checks for clashes — including buffer/travel time and your business hours — before saving. You can always override deliberately.</p></div>';
+  const svcSel=$("#bkService");
+  function syncIntake(){
+    bkIntake={};
+    const sv=svcById(svcSel.value);const box=$("#bkIntake");
+    if(!sv){box.innerHTML="";return;}
+    if(!$("#bkPrice").dataset.touched)$("#bkPrice").value=sv.price;
+    const qs=[];
+    S.packs.forEach(p=>(p.questions||[]).forEach(q=>{if(q.service===sv.name)qs.push(q);}));
+    box.innerHTML=qs.map((q,i)=>'<label>📦 '+esc(q.question)+'</label><input data-intake="'+i+'" placeholder="Client\'s answer">').join("");
+    $$("#bkIntake [data-intake]").forEach(inp=>inp.oninput=()=>{bkIntake[inp.dataset.intake]=inp.value;});
+    box.dataset.qs=JSON.stringify(qs.map(q=>q.question));
+  }
+  svcSel.onchange=syncIntake;
+  $("#bkPrice").oninput=e=>{e.target.dataset.touched="1";};
+  $("#bkRepeat").onchange=e=>{$("#bkRepeatN").style.display=e.target.value?"":"none";};
+  $("#bkRepeatN").style.display="none";
+  if(svcSel.value)syncIntake();
+  $("#bkSave").onclick=()=>saveBooking(prefill);
+  if(prefill&&$("#bkCancelEdit"))$("#bkCancelEdit").onclick=()=>showTab("calendar");
+}
+function fillBookForm(a){
+  renderBook(a);
+  $("#bkClient").value=a.clientId;
+  $("#bkService").value=a.serviceId;$("#bkService").dispatchEvent(new Event("change"));
+  $("#bkDate").value=a.date;$("#bkStart").value=a.start;
+  $("#bkPrice").value=a.price;$("#bkPrice").dataset.touched="1";
+  $("#bkDepAmt").value=a.deposit?a.deposit.amount:0;
+  $("#bkDepMethod").value=a.deposit?a.deposit.method:"";
+  $("#bkPaid").checked=!!a.paid;$("#bkNotes").value=a.notes||"";
+}
+function saveBooking(editing){
+  const sv=svcById($("#bkService").value);
+  if(!sv){toast("Pick a service first");return;}
+  let clientId=$("#bkClient").value;
+  const newName=$("#bkNewClient").value.trim();
+  if(newName){const nc={id:uid(),name:newName,phone:($("#bkNewClientPhone")?$("#bkNewClientPhone").value.trim():""),notes:""};S.clients.push(nc);clientId=nc.id;}
+  if(!clientId){toast("Pick or create a client first");return;}
+  const date=$("#bkDate").value, start=$("#bkStart").value;
+  if(!date||!start){toast("Date and start time are required");return;}
+  let notes=$("#bkNotes").value.trim();
+  const qsJson=($("#bkIntake").dataset.qs||"[]");
+  try{JSON.parse(qsJson).forEach((q,i)=>{if(bkIntake[i])notes+=(notes?"\n":"")+q+" "+bkIntake[i];});}catch(e){}
+  const base={clientId:clientId,serviceId:sv.id,serviceName:sv.name,
+    price:num($("#bkPrice").value,sv.price),duration:sv.duration,buffer:sv.buffer,
+    date:date,start:start,status:editing?editing.status:"booked",
+    deposit:{amount:num($("#bkDepAmt").value,0),method:$("#bkDepMethod").value.trim()},
+    paid:$("#bkPaid").checked,notes:notes,seriesId:editing?editing.seriesId:""};
+  // Build occurrence list
+  const occ=[Object.assign({},base)];
+  const rep=$("#bkRepeat").value;
+  if(rep&&!editing){
+    const n=Math.min(52,Math.max(2,parseInt($("#bkCount").value,10)||8));
+    const sid=uid();base.seriesId=sid;occ[0].seriesId=sid;
+    let d=date;
+    for(let i=1;i<n;i++){
+      if(rep==="monthly"){const pd=parseDate(d);const nd=new Date(pd.getFullYear(),pd.getMonth()+1,pd.getDate());d=dstr(nd);}
+      else d=addDays(d,rep==="weekly"?7:14);
+      occ.push(Object.assign({},base,{date:d,seriesId:sid}));
+    }
+  }
+  // Conflict check across occurrences (excluding the edited one)
+  const problems=[];
+  occ.forEach((o,i)=>{
+    const chk=checkConflicts({date:o.date,start:o.start,duration:o.duration,buffer:o.buffer,
+      excludeId:editing&&i===0?editing.id:""});
+    chk.conflicts.forEach(cf=>problems.push(fmtDate(o.date)+": clashes with "+cf.serviceName+
+      " for "+(clientById(cf.clientId)||{}).name+" at "+toTime(toMin(cf.start))+" (incl. buffer)."));
+    chk.hoursIssues.forEach(h=>problems.push(fmtDate(o.date)+": "+h));
+    // also check against other new occurrences in the same series
+    occ.forEach((o2,j)=>{if(j!==i&&o2.date===o.date){
+      const s1=toMin(o.start),e1=s1+o.duration+o.buffer,s2=toMin(o2.start),e2=s2+o2.duration+o2.buffer;
+      if(s1<e2&&s2<e1&&j>i)problems.push(fmtDate(o.date)+": series appointments overlap each other.");}});
+  });
+  if(problems.length){
+    $("#bkWarn").innerHTML='<div class="errbox"><b>⚠ Hold on — please check:</b><br>'+
+      problems.slice(0,8).map(esc).join("<br>")+
+      (problems.length>8?"<br>…and "+(problems.length-8)+" more":"")+
+      '<div class="btnrow"><button class="btn danger" id="bkOverride">Book anyway (my call)</button></div></div>';
+    $("#bkOverride").onclick=()=>commitBooking(occ,editing);
+    if($("#bkWarn").scrollIntoView)$("#bkWarn").scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  commitBooking(occ,editing);
+}
+function commitBooking(occ,editing){
+  if(editing){const idx=S.appointments.findIndex(x=>x.id===editing.id);
+    if(idx>=0)S.appointments[idx]=Object.assign({},occ[0],{id:editing.id});}
+  else occ.forEach(o=>S.appointments.push(Object.assign({},o,{id:uid()})));
+  save();calDate=occ[0].date;calView="day";showTab("calendar");
+  toast(editing?"Appointment updated":"Booked ✔ "+occ.length+" appointment"+(occ.length>1?"s":""));
+}
+</script>
+<script>
+"use strict";
+/* ============================== clients ============================== */
+function renderClients(){
+  const el=$("#view-clients");
+  let html='<div class="card"><h2>Clients</h2>'+
+   '<div class="grid2"><div><label>Search</label><input id="clSearch" placeholder="Name or phone…"></div>'+
+   '<div style="display:flex;align-items:flex-end"><button class="btn" id="clAdd" style="width:100%">+ Add client</button></div></div>'+
+   '<div id="clList" style="margin-top:10px"></div></div>';
+  el.innerHTML=html;
+  const draw=()=>{
+    const q=($("#clSearch").value||"").toLowerCase();
+    const list=S.clients.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.phone||"").includes(q))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+    $("#clList").innerHTML=list.length?list.map(c=>{
+      const st=clientStats(c.id);
+      return '<div class="appt" style="border-left-color:#334155" data-client="'+c.id+'"><div class="row"><div>'+
+       "<b>"+esc(c.name)+"</b> "+(st.noshows>=2?' <span class="pill flag">⚠ '+st.noshows+" no-shows — ask for a deposit</span>":st.noshows===1?' <span class="pill noshow">1 no-show</span>':"")+
+       '<br><span class="meta">'+esc(c.phone||"No phone")+" · "+st.visits+" visits · lifetime spend "+money(st.spend)+'</span></div>'+
+       '<span class="small">View ▸</span></div></div>';}).join("")
+      :'<div class="closed">No clients match.</div>';
+    $$("#clList [data-client]").forEach(n=>n.onclick=()=>openClient(n.dataset.client));
+  };
+  $("#clSearch").oninput=draw;draw();
+  $("#clAdd").onclick=()=>openClientForm(null);
+}
+function openClient(id){
+  const c=clientById(id);if(!c)return;const st=clientStats(id);
+  const hist=S.appointments.filter(a=>a.clientId===id).sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+  openModal("<h2>"+esc(c.name)+"</h2>"+
+   '<p class="small" style="margin-top:-6px">'+esc(c.phone||"")+"</p>"+
+   "<table><tr><th>Visits</th><td>"+st.visits+"</td></tr>"+
+   "<tr><th>Lifetime spend (paid &amp; done)</th><td>"+money(st.spend)+"</td></tr>"+
+   "<tr><th>No-shows</th><td>"+st.noshows+(st.noshows>=2?' <span class="pill flag">Repeat no-show — require a deposit</span>':"")+"</td></tr>"+
+   (c.notes?"<tr><th>Notes</th><td>"+esc(c.notes)+"</td></tr>":"")+"</table>"+
+   "<h3>Visit history</h3>"+
+   (hist.length?hist.map(a=>'<div class="appt" data-appt2="'+a.id+'"><div class="row"><div><b>'+fmtDate(a.date)+
+     "</b> · "+toTime(toMin(a.start))+" — "+esc(a.serviceName)+'</div><div>'+statusPill(a)+"</div></div></div>").join("")
+     :'<p class="small">No appointments yet.</p>')+
+   '<div class="btnrow"><button class="btn secondary" id="clBookBtn">Book for this client</button>'+
+   '<button class="btn ghost" id="clEditBtn">Edit client</button>'+
+   '<button class="btn ghost" onclick="closeModal()">Close</button></div>');
+  $$("[data-appt2]").forEach(n=>n.onclick=()=>openAppt(n.dataset.appt2));
+  $("#clBookBtn").onclick=()=>{closeModal();showTab("book");const cs=$("#bkClient");if(cs)cs.value=id;};
+  $("#clEditBtn").onclick=()=>openClientForm(c);
+}
+function openClientForm(c){
+  openModal("<h2>"+(c?"Edit client":"Add client")+"</h2>"+
+   '<label>Full name</label><input id="cfName" value="'+esc(c?c.name:"")+'">'+
+   '<label>Phone</label><input id="cfPhone" value="'+esc(c?c.phone:"")+'" placeholder="(555) 000-0000">'+
+   '<label>Notes (address, gate code, preferences, warnings…)</label><textarea id="cfNotes">'+esc(c?c.notes:"")+"</textarea>"+
+   '<div class="btnrow"><button class="btn" id="cfSave">Save</button>'+
+   '<button class="btn ghost" onclick="closeModal()">Cancel</button>'+
+   (c?'<button class="btn danger" id="cfDelete">Delete client</button>':"")+"</div>");
+  $("#cfSave").onclick=()=>{
+    const name=$("#cfName").value.trim();if(!name){toast("Name is required");return;}
+    if(c){c.name=name;c.phone=$("#cfPhone").value.trim();c.notes=$("#cfNotes").value.trim();}
+    else S.clients.push({id:uid(),name:name,phone:$("#cfPhone").value.trim(),notes:$("#cfNotes").value.trim()});
+    save();closeModal();renderClients();toast("Client saved");};
+  if(c)$("#cfDelete").onclick=()=>{if(!confirm("Delete this client? Their appointments stay but will show as (deleted client)."))return;
+    S.clients=S.clients.filter(x=>x.id!==c.id);save();closeModal();renderClients();};
+}
+
+/* ============================== waitlist ============================== */
+function renderWaitlist(){
+  const el=$("#view-waitlist");
+  const svcOpts=S.services.map(s=>'<option value="'+s.id+'">'+esc(s.name)+" ("+s.duration+" min)</option>").join("");
+  const cliOpts=S.clients.map(c=>'<option value="'+c.id+'">'+esc(c.name)+"</option>").join("");
+  el.innerHTML='<div class="card"><h2>⏳ Waitlist</h2>'+
+   '<p class="small">When an appointment is cancelled, BookedSolid checks this list and offers you the clients whose service fits the freed slot. Add anyone who asks for a spot you don\'t have yet.</p>'+
+   '<div class="grid2"><div><label>Client</label><select id="wlClient">'+cliOpts+'</select></div>'+
+   '<div><label>Service they want</label><select id="wlService">'+svcOpts+"</select></div></div>"+
+   '<label>Preferred days</label><div>'+DOWS.map((d,i)=>'<label style="display:inline-block;margin:2px 8px 2px 0;font-weight:500"><input type="checkbox" class="wlDay" value="'+i+'" style="width:auto;min-height:0"> '+d.slice(0,3)+"</label>").join("")+"</div>"+
+   '<label>Notes</label><input id="wlNotes" placeholder="Weekend only, after 3pm, flexible…">'+
+   '<div class="btnrow"><button class="btn" id="wlAdd">Add to waitlist</button></div></div>'+
+   '<div class="card"><h2>Waiting ('+S.waitlist.length+")</h2>"+
+   (S.waitlist.length?S.waitlist.map(w=>'<div class="appt" style="border-left-color:var(--accent)"><div class="row"><div><b>'+
+     esc(w.clientName)+"</b> — "+esc(w.serviceName)+' <span class="small">('+w.duration+" min + "+(w.buffer||0)+' buffer)</span><br>'+
+     '<span class="meta">'+(w.preferDays&&w.preferDays.length?"Prefers: "+w.preferDays.map(d=>DOWS3[d]).join(", "):"Any day")+
+     (w.notes?" · "+esc(w.notes):"")+'</span></div>'+
+     '<button class="btn danger small" data-wldel="'+w.id+'">Remove</button></div></div>').join("")
+     :'<div class="closed">Nobody is waiting right now.</div>')+"</div>";
+  $("#wlAdd").onclick=()=>{
+    const c=clientById($("#wlClient").value);const sv=svcById($("#wlService").value);
+    if(!c||!sv){toast("Add a client and a service first");return;}
+    const days=$$(".wlDay").filter(x=>x.checked).map(x=>+x.value);
+    S.waitlist.push({id:uid(),clientId:c.id,clientName:c.name,serviceName:sv.name,
+      duration:sv.duration,buffer:sv.buffer,preferDays:days,notes:$("#wlNotes").value.trim()});
+    save();renderWaitlist();toast("Added to waitlist");};
+  $$("[data-wldel]").forEach(b=>b.onclick=()=>{S.waitlist=S.waitlist.filter(x=>x.id!==b.dataset.wldel);save();renderWaitlist();});
+}
+
+/* ============================== money ============================== */
+let moneyMode="week", moneyAnchor=todayStr();
+function renderMoney(){
+  const el=$("#view-money");
+  let from,to,label;
+  if(moneyMode==="week"){from=addDays(moneyAnchor,-((dowOf(moneyAnchor)+6)%7));to=addDays(from,6);label="Week of "+fmtDate(from);}
+  else if(moneyMode==="month"){const d=parseDate(moneyAnchor);from=dstr(new Date(d.getFullYear(),d.getMonth(),1));
+    to=dstr(new Date(d.getFullYear(),d.getMonth()+1,0));label=MONTHS[d.getMonth()]+" "+d.getFullYear();}
+  else{from=moneyAnchor;to=moneyAnchor;label=fmtDateLong(moneyAnchor);}
+  const r=moneyReport(from,to);
+  el.innerHTML='<div class="card"><h2>💰 Money</h2>'+
+   '<div class="datebar"><span class="seg">'+["day","week","month"].map(m=>'<button data-mm="'+m+'" class="'+(moneyMode===m?"active":"")+'">'+m[0].toUpperCase()+m.slice(1)+"</button>").join("")+"</span>"+
+   '<button class="btn ghost small" id="mnPrev">◀</button><span class="cur">'+esc(label)+'</span><button class="btn ghost small" id="mnNext">▶</button>'+
+   '<button class="btn ghost small" id="mnToday">Today</button></div>'+
+   '<div class="kpi">'+
+   '<div class="k"><div class="v">'+money(r.booked)+'</div><div class="l">Booked revenue (kept appointments)</div></div>'+
+   '<div class="k"><div class="v">'+money(r.completed)+'</div><div class="l">Completed (marked Done)</div></div>'+
+   '<div class="k"><div class="v" style="color:var(--danger)">'+money(r.noshowLoss)+'</div><div class="l">Lost to no-shows ('+r.noshowCount+")</div></div>"+
+   '<div class="k"><div class="v">'+r.apptCount+'</div><div class="l">Appointments in period</div></div></div>'+
+   '<div class="kpi" style="margin-top:10px"><div class="k"><div class="v">'+money(totalStillOwed())+'</div><div class="l">Still owed across bookings</div></div></div>'+
+   '<p class="small">Still owed across bookings is all-time (not just this period): for each unpaid, non-cancelled booking it is the price minus the deposit recorded — $0 if paid in full, and never below $0. BookedSolid has no separate payments list, so payments beyond the deposit are captured by marking a booking paid.</p>'+
+   "<h3>Most-booked services</h3>"+
+   (r.top.length?'<div class="tblwrap"><table>'+r.top.map(t=>"<tr><td>"+esc(t.name)+"</td><td><b>"+t.count+"</b></td></tr>").join("")+"</table></div>"
+     :'<p class="small">Nothing booked in this period yet.</p>')+
+   '<p class="small">Booked revenue counts confirmed/done appointments at their saved price. No-show loss is what those empty slots would have earned — deposits recorded on no-shows are your call to keep per your policy.</p></div>';
+  $$("[data-mm]").forEach(b=>b.onclick=()=>{moneyMode=b.dataset.mm;renderMoney();});
+  $("#mnPrev").onclick=()=>{moneyAnchor=addDays(moneyAnchor,moneyMode==="month"?-30:moneyMode==="week"?-7:-1);renderMoney();};
+  $("#mnNext").onclick=()=>{moneyAnchor=addDays(moneyAnchor,moneyMode==="month"?30:moneyMode==="week"?7:1);renderMoney();};
+  $("#mnToday").onclick=()=>{moneyAnchor=todayStr();renderMoney();};
+}
+
+/* ============================== packs ============================== */
+function renderPacks(){
+  const el=$("#view-packs");
+  el.innerHTML='<div class="card"><h2>📦 Packs — add-ons for BookedSolid</h2>'+
+   '<p>Industry packs plug straight into your book: new services (with the right durations, buffers and prices), extra reminder-text templates, and intake questions that appear on the booking form. Buy a pack on Gumroad, download the <b>.json</b> file, and import it here.</p>'+
+   '<label>Import a pack file (.json, format bookedsolid-pack-v1)</label>'+
+   '<input type="file" id="pkFile" accept=".json,application/json">'+
+   '<label>…or paste pack JSON</label><textarea id="pkPaste" placeholder=\'{"format":"bookedsolid-pack-v1", ...}\'></textarea>'+
+   '<div class="btnrow"><button class="btn" id="pkImportPaste">Import pasted pack</button></div>'+
+   '<div id="pkMsg"></div>'+
+   "<h3>Installed packs</h3>"+
+   (S.packs.length?S.packs.map(p=>'<div class="appt" style="cursor:default"><div class="row"><div><b>'+esc(p.name)+"</b>"+
+     '<br><span class="meta">Imported '+esc(p.importedAt||"")+" · "+(p.services||[]).length+" services · "+
+     (p.templates||[]).length+" templates · "+(p.questions||[]).length+" intake questions</span></div>"+
+     '<button class="btn danger small" data-pkdel="'+p.id+'">Remove pack</button></div></div>').join("")
+     :'<p class="small">No packs installed yet. (The included Sample Mini-Pack arrives with the demo data.)</p>')+
+   '<p class="small">Removing a pack removes the services and templates it added. Appointments already booked keep their saved price and duration.</p></div>';
+  const doImport=(text)=>{
+    try{const pack=JSON.parse(text);const rec=importPack(pack);save();renderPacks();
+      $("#pkMsg").innerHTML='<div class="okbox">✔ Imported "'+esc(rec.name)+'" — its services are now in your service list.</div>';}
+    catch(e){$("#pkMsg").innerHTML='<div class="errbox">Could not import that pack: '+esc(e.message)+"</div>";}};
+  $("#pkFile").onchange=e=>{const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=()=>doImport(String(r.result));r.onerror=()=>doImport("");
+    r.readAsText(f);};
+  $("#pkImportPaste").onclick=()=>{const t=$("#pkPaste").value.trim();if(t)doImport(t);};
+  $$("[data-pkdel]").forEach(b=>b.onclick=()=>{
+    const p=S.packs.find(x=>x.id===b.dataset.pkdel);if(!p)return;
+    if(!confirm("Remove pack "+p.name+" and the services/templates it added?"))return;
+    S.services=S.services.filter(s=>(p.services||[]).indexOf(s.id)<0);
+    S.templates=S.templates.filter(t=>(p.templates||[]).indexOf(t.id)<0);
+    S.packs=S.packs.filter(x=>x.id!==p.id);save();renderPacks();toast("Pack removed");});
+}
+
+/* ============================== settings & help ============================== */
+function renderSettings(){
+  const el=$("#view-settings");const st=S.settings;
+  let html='<div class="card"><h2>⚙️ Business settings</h2>'+
+   '<div class="grid2"><div><label>Business name</label><input id="stBiz" value="'+esc(st.businessName)+'"></div>'+
+   '<div><label>Your name</label><input id="stOwner" value="'+esc(st.ownerName||"")+'"></div></div>'+
+   '<div class="grid2"><div><label>Phone</label><input id="stPhone" value="'+esc(st.phone)+'"></div>'+
+   '<div><label>Email</label><input id="stEmail" value="'+esc(st.email)+'"></div></div>'+
+   '<div class="btnrow"><button class="btn" id="stSave">Save settings</button></div></div>';
+  html+='<div class="card"><h2>🕐 Business hours &amp; breaks</h2>';
+  for(let d=0;d<7;d++){const h=S.hours[d];
+    html+='<div class="dayoffrow"><span class="dname">'+DOWS[d]+'</span>'+
+     '<label style="margin:0"><input type="checkbox" id="hr_open_'+d+'" '+(h.open?"checked":"")+' style="width:auto;min-height:0"> Open</label>'+
+     '<input type="time" id="hr_start_'+d+'" value="'+h.start+'" style="width:130px"> to '+
+     '<input type="time" id="hr_end_'+d+'" value="'+h.end+'" style="width:130px">'+
+     '<span class="small">Breaks: '+((h.breaks||[]).map(b=>toTime(toMin(b.start))+"–"+toTime(toMin(b.end))).join(", ")||"none")+"</span>"+
+     '<label style="margin:0">Break <input type="time" id="br_start_'+d+'" style="width:118px"> to <input type="time" id="br_end_'+d+'" style="width:118px"></label>'+
+     '<button class="btn ghost small" data-break="'+d+'">+ Add break</button>'+
+     ((h.breaks||[]).length?'<button class="btn ghost small" data-breakdel="'+d+'">Clear breaks</button>':"")+"</div>";}
+  html+='<div class="btnrow"><button class="btn" id="hrSave">Save hours</button></div></div>';
+  html+='<div class="card"><h2>🧰 Services</h2><div id="svList"></div>'+
+   '<h3 id="svFormTitle">Add a service</h3><div class="grid3"><div><label>Name</label><input id="svName"></div>'+
+   '<div><label>Duration (minutes)</label><input inputmode="decimal" type="number" id="svDur" value="60" min="5" step="5"></div>'+
+   '<div><label>Buffer after (travel/prep, minutes)</label><input inputmode="decimal" type="number" id="svBuf" value="10" min="0" step="5"></div></div>'+
+   '<div class="grid2"><div><label>Price ($)</label><input inputmode="decimal" type="number" id="svPrice" value="75" min="0" step="0.01"></div>'+
+   '<div><label>Color</label><input type="color" id="svColor" value="#0f766e" style="min-height:42px"></div></div>'+
+   '<div class="btnrow"><button class="btn" id="svAdd">Add service</button><button class="btn ghost hide" id="svCancelEdit">Cancel edit</button></div>'+
+   '<p class="small">Editing a service only affects future bookings — appointments already booked keep the price and duration they were booked at.</p></div>';
+  html+='<div class="card"><h2>💬 Reminder text templates</h2><div id="tpList"></div>'+
+   '<h3>Add a template</h3><label>Name</label><input id="tpName">'+
+   '<label>Text — placeholders: {name} {service} {date} {time} {business} {price} {deposit}</label>'+
+   '<textarea id="tpBody" placeholder="Hi {name}, ..."></textarea>'+
+   '<div class="btnrow"><button class="btn" id="tpAdd">Add template</button></div>'+
+   '<p class="small">BookedSolid works offline and cannot send messages itself. Open any appointment and tap "Copy text", then paste the filled-in message into your own texting app — it takes five seconds and keeps you off another subscription.</p></div>';
+  html+='<div class="card"><h2>🚀 Starter presets &amp; demo</h2>'+
+   '<label>Load an industry starter set (adds its services; does not delete yours)</label>'+
+   '<div class="grid2"><div><select id="psSel">'+Object.keys(PRESETS).map(k=>'<option value="'+k+'">'+esc(PRESETS[k].label)+"</option>").join("")+"</select></div>"+
+   '<div><button class="btn secondary" id="psLoad" style="width:100%">Load preset services</button></div></div>'+
+   '<div class="btnrow"><button class="btn ghost" id="dmLoad">Load demo data (mobile detailer)</button>'+
+   '<button class="btn danger" id="dmClear">Clear demo data</button></div>'+
+   '<p class="small">"Clear demo data" removes ONLY the sample business, clients, appointments, waitlist entry and sample pack. Your real data is never touched by it.</p></div>';
+  html+='<div class="card"><h2>💾 Backup — your book is a file you own</h2>'+
+   '<div class="btnrow"><button class="btn secondary" id="bkExport">Export backup (.json)</button></div>'+
+   '<label>Import a backup file</label><input type="file" id="bkImportFile" accept=".json,application/json">'+
+   '<div id="bkMsg"></div>'+
+   '<div class="btnrow"><button class="btn danger" id="wipeAll">Erase EVERYTHING and start over</button></div></div>';
+  html+='<div class="card"><h2>❓ Help — how BookedSolid works</h2>'+
+   "<p><b>What this is:</b> your own appointment book that does the math — buffers, clashes, money totals, no-show tracking — in one file that works with no internet, no account and no subscription.</p>"+
+   "<p><b>What this is NOT:</b> clients cannot book into it (there is no online booking page or link). You enter bookings yourself from calls, texts and walk-ins, like a paper book — one that warns you before you double-book. It also never collects or processes payments: deposits and payments are <i>recorded</i> (amount + how the client paid you) so your policy is documented.</p>"+
+   "<p><b>Buffers:</b> every service has buffer-after minutes for travel, cleanup or prep. An appointment blocks out start → end + buffer, and clash warnings respect that. A 3:00 detail ending at 6:00 with a 30-minute buffer means your next job can't start before 6:30 — unless you deliberately override the warning.</p>"+
+   "<p><b>Reminders:</b> open an appointment → pick a template → Copy text → paste into your messaging app. The {placeholders} fill themselves in.</p>"+
+   "<p><b>No-shows:</b> mark them. The client file counts them, flags repeat offenders, and the Money tab shows exactly what no-shows cost you — the case for requiring deposits, made in your own numbers.</p>"+
+   "<p><b>Packs:</b> extra industry content (services, templates, intake questions) sold separately as <i>bookedsolid-pack-v1</i> JSON files. Import them in the Packs tab. A free Sample Mini-Pack is included with the demo so you can see exactly how packs work.</p>"+
+   "<p><b>Your data:</b> everything lives in this browser on this device. Export a backup weekly and keep it somewhere safe — if you clear your browser data without a backup, the book is gone.</p></div>";
+  el.innerHTML=html;
+  let editingSvc=null;
+  const resetSvcForm=()=>{editingSvc=null;$("#svFormTitle").textContent="Add a service";
+    $("#svAdd").textContent="Add service";$("#svCancelEdit").classList.add("hide");
+    $("#svName").value="";$("#svDur").value="60";$("#svBuf").value="10";$("#svPrice").value="75";$("#svColor").value="#0f766e";};
+  const drawSv=()=>{$("#svList").innerHTML=S.services.length?'<div class="tblwrap"><table style="min-width:540px"><tr><th>Service</th><th>Min</th><th>Buffer</th><th>Price</th><th></th></tr>'+
+    S.services.map(s=>"<tr><td><span class='swatch' style='background:"+esc(s.color||"#0f766e")+"'></span><b>"+esc(s.name)+"</b>"+(s.pack?' <span class="small">📦 '+esc(s.pack)+"</span>":"")+"</td><td>"+s.duration+"</td><td>"+s.buffer+"</td><td>"+money(s.price)+'</td><td style="white-space:nowrap"><button class="btn ghost small" data-svedit="'+s.id+'">Edit</button> <button class="btn ghost small" data-svdel="'+s.id+'">Delete</button></td></tr>').join("")+"</table></div>"
+    :'<p class="small">No services yet.</p>';
+    $$("[data-svedit]").forEach(b=>b.onclick=()=>{const s=S.services.find(x=>x.id===b.dataset.svedit);if(!s)return;
+      editingSvc=s.id;$("#svName").value=s.name;$("#svDur").value=s.duration;$("#svBuf").value=s.buffer;
+      $("#svPrice").value=s.price;$("#svColor").value=s.color||"#0f766e";
+      $("#svFormTitle").textContent="Edit service";$("#svAdd").textContent="Save service changes";
+      $("#svCancelEdit").classList.remove("hide");
+      if($("#svName").scrollIntoView)$("#svName").scrollIntoView({behavior:"smooth",block:"center"});
+      $("#svName").focus();});
+    $$("[data-svdel]").forEach(b=>b.onclick=()=>{if(!confirm("Delete this service? Booked appointments keep their saved details."))return;
+      if(editingSvc===b.dataset.svdel)resetSvcForm();
+      S.services=S.services.filter(x=>x.id!==b.dataset.svdel);save();drawSv();});};
+  drawSv();
+  const drawTp=()=>{$("#tpList").innerHTML='<div class="tblwrap"><table><tr><th>Template</th><th></th></tr>'+
+    S.templates.map(t=>"<tr><td><b>"+esc(t.name)+"</b>"+(t.pack?' <span class="small">📦 '+esc(t.pack)+"</span>":"")+'<br><span class="small">'+esc(t.body.slice(0,110))+"…</span></td>"+
+      '<td><button class="btn ghost small" data-tpdel="'+t.id+'">Delete</button></td></tr>').join("")+"</table></div>";
+    $$("[data-tpdel]").forEach(b=>b.onclick=()=>{S.templates=S.templates.filter(x=>x.id!==b.dataset.tpdel);save();drawTp();});};
+  drawTp();
+  $("#stSave").onclick=()=>{st.businessName=$("#stBiz").value.trim();st.ownerName=$("#stOwner").value.trim();
+    st.phone=$("#stPhone").value.trim();st.email=$("#stEmail").value.trim();save();
+    $("#hdrBiz").textContent=st.businessName||"Your appointment book";toast("Settings saved");};
+  $$("[data-break]").forEach(b=>b.onclick=()=>{
+    const d=+b.dataset.break;
+    const s2=($("#br_start_"+d)?$("#br_start_"+d).value:"")||"";
+    const e2=($("#br_end_"+d)?$("#br_end_"+d).value:"")||"";
+    const timeRe=/^([01]\d|2[0-3]):[0-5]\d$/;
+    if(!timeRe.test(s2)||!timeRe.test(e2)){toast("Set the break start and end times first (HH:MM) — nothing was added.");return;}
+    if(toMin(e2)<=toMin(s2)){toast("Break end must be after break start — nothing was added.");return;}
+    S.hours[d].breaks=S.hours[d].breaks||[];S.hours[d].breaks.push({start:s2,end:e2});save();renderSettings();toast("Break added");});
+  $$("[data-breakdel]").forEach(b=>b.onclick=()=>{S.hours[+b.dataset.breakdel].breaks=[];save();renderSettings();});
+  $("#hrSave").onclick=()=>{for(let d=0;d<7;d++){S.hours[d].open=$("#hr_open_"+d).checked;
+    S.hours[d].start=$("#hr_start_"+d).value||"09:00";S.hours[d].end=$("#hr_end_"+d).value||"17:00";}
+    save();toast("Hours saved");};
+  $("#svAdd").onclick=()=>{const name=$("#svName").value.trim();if(!name){toast("Service needs a name");return;}
+    const vals={name:name,duration:Math.max(5,num($("#svDur").value,60)),
+      buffer:Math.max(0,num($("#svBuf").value,0)),price:num($("#svPrice").value,0),color:$("#svColor").value};
+    if(editingSvc){const s=S.services.find(x=>x.id===editingSvc);
+      if(s)Object.assign(s,vals); /* id (and pack tag) preserved — existing bookings keep their service reference */
+      resetSvcForm();save();drawSv();toast("Service updated");return;}
+    S.services.push(Object.assign({id:uid()},vals));
+    save();drawSv();toast("Service added");};
+  $("#svCancelEdit").onclick=()=>{resetSvcForm();};
+  $("#tpAdd").onclick=()=>{const name=$("#tpName").value.trim(),body=$("#tpBody").value.trim();
+    if(!name||!body){toast("Template needs a name and text");return;}
+    S.templates.push({id:uid(),name:name,body:body});save();drawTp();toast("Template added");};
+  $("#psLoad").onclick=()=>{const k=$("#psSel").value;
+    PRESETS[k].services.forEach(sv=>{if(!S.services.some(s=>s.name===sv.name))
+      S.services.push(Object.assign({id:uid()},sv));});
+    S.presetLoaded=k;save();drawSv();toast("Preset loaded: "+PRESETS[k].label);};
+  $("#dmLoad").onclick=()=>{seedDemo();$("#hdrBiz").textContent=S.settings.businessName;drawSv();drawTp();
+    toast("Demo loaded — a mobile detailer's week");};
+  $("#dmClear").onclick=()=>{if(!confirm("Remove all demo data? Your real entries stay."))return;clearDemo();renderSettings();toast("Demo data cleared");};
+  $("#bkExport").onclick=()=>{
+    const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+    const u=URL.createObjectURL(blob);const a=document.createElement("a");
+    a.href=u;a.download="bookedsolid-backup-"+todayStr()+".json";a.click();
+    setTimeout(()=>URL.revokeObjectURL(u),2000);};
+  $("#bkImportFile").onchange=e=>{const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{try{const p=JSON.parse(String(r.result));
+      if(!p||!p.settings||!Array.isArray(p.appointments))throw new Error("Not a BookedSolid backup.");
+      if(!confirm("Replace ALL current data with this backup?"))return;
+      S=p;save();location.reload();}
+      catch(err){$("#bkMsg").innerHTML='<div class="errbox">Import failed: '+esc(err.message)+" Nothing was changed.</div>";}};
+    r.readAsText(f);};
+  $("#wipeAll").onclick=()=>{if(!confirm("Erase EVERYTHING (clients, appointments, services) and start over? Export a backup first if unsure."))return;
+    if(!confirm("Really erase everything? This cannot be undone."))return;
+    localStorage.removeItem(LS_KEY);S=defaultState();save();location.reload();};
+}
+function clearDemo(){
+  const demoNames=["Marcus Hill","Priya Nair","Tom Beckett","Alisha Grant"];
+  const demoClientIds=S.clients.filter(c=>demoNames.indexOf(c.name)>=0).map(c=>c.id);
+  S.appointments=S.appointments.filter(a=>demoClientIds.indexOf(a.clientId)<0);
+  S.clients=S.clients.filter(c=>demoNames.indexOf(c.name)<0);
+  S.waitlist=S.waitlist.filter(w=>demoClientIds.indexOf(w.clientId)<0);
+  const pack=S.packs.find(p=>p.name.indexOf("Sample Mini-Pack")===0);
+  if(pack){S.services=S.services.filter(s=>(pack.services||[]).indexOf(s.id)<0);
+    S.templates=S.templates.filter(t=>(pack.templates||[]).indexOf(t.id)<0);
+    S.packs=S.packs.filter(p2=>p2.id!==pack.id);}
+  if(S.settings.businessName==="Shine Mobile Detailing")S.settings.businessName="";
+  if(S.settings.phone==="(555) 014-2280")S.settings.phone="";
+  const hb=document.getElementById("hdrBiz");
+  if(hb)hb.textContent=S.settings.businessName||"Your appointment book";
+  if(S.presetLoaded==="detailing"&&S.services.length&&
+     S.services.every(s=>PRESETS.detailing.services.some(d=>d.name===s.name))){
+    S.services=S.services.filter(s=>!PRESETS.detailing.services.some(d=>d.name===s.name));}
+  S.presetLoaded="";S.demoLoaded=false;save();
+}
+
+/* ============================== boot ============================== */
+load();
+if(!S.demoLoaded&&S.clients.length===0&&S.appointments.length===0){seedDemo();}
+$("#hdrBiz").textContent=S.settings.businessName||"Your appointment book";
+showTab("calendar");
+</script>
+
+<style id="wwLegalCss">
+#wwLegalOverlay{position:fixed;inset:0;z-index:99990;background:rgba(10,12,16,.72);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:18px 12px;box-sizing:border-box}
+#wwLegalOverlay[hidden]{display:none}
+.ww-card{background:#fff;color:#16181d;max-width:560px;width:100%;border-radius:14px;padding:22px 20px;box-sizing:border-box;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.ww-appname{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#5b6472;font-weight:700}
+.ww-card h2{margin:6px 0 10px;font-size:24px}
+.ww-sum{font-size:17px;line-height:1.45;font-weight:600;margin:10px 0}
+.ww-follow{color:#444c58;font-size:14px;line-height:1.45}
+.ww-updated{background:#fff4d6;border:1px solid #e3c566;color:#5c4a00;border-radius:8px;padding:8px 10px;font-size:14px}
+.ww-btn{display:block;width:100%;min-height:48px;margin:10px 0 0;padding:12px 14px;font-size:16px;border-radius:10px;border:1px solid #9aa3af;background:#f2f4f7;color:#16181d;cursor:pointer;box-sizing:border-box}
+.ww-btn.ww-primary{background:#14532d;border-color:#14532d;color:#fff;font-weight:700;min-height:52px}
+.ww-btn.ww-primary:disabled{opacity:.45;cursor:not-allowed}
+.ww-check{display:flex;gap:10px;align-items:flex-start;margin:14px 0 2px;font-size:15px;line-height:1.4;color:#16181d;cursor:pointer}
+.ww-check input{width:22px;height:22px;flex:0 0 auto;margin:1px 0 0;accent-color:#14532d;cursor:pointer}
+#wwLegalPanel{position:fixed;inset:0;z-index:99995;background:#fff;color:#16181d;overflow-y:auto;box-sizing:border-box}
+#wwLegalPanel[hidden]{display:none}
+.ww-panel-inner{max-width:720px;margin:0 auto;padding:16px 18px 40px;box-sizing:border-box;line-height:1.55}
+.ww-panel-inner h3{margin-top:26px}
+.ww-panel-inner h4{margin-top:20px}
+.ww-accept{background:#eef7ee;border:1px solid #b9d8b9;border-radius:8px;padding:10px 12px}
+.ww-seller{margin-top:28px;padding-top:12px;border-top:1px solid #ddd;color:#444c58}
+#wwLegalClose{min-height:48px;padding:10px 16px;font-size:16px;border-radius:10px;border:1px solid #9aa3af;background:#f2f4f7;color:#16181d;cursor:pointer}
+[data-ww-legal-card]{border:1px solid #9aa3af;border-radius:12px;padding:14px;margin:14px 0;background:rgba(127,127,127,.06)}
+[data-ww-legal-btn]{min-height:48px;padding:10px 16px;font-size:16px;border-radius:10px;border:1px solid #14532d;background:#14532d;color:#fff;font-weight:700;cursor:pointer;width:100%}
+@media print{#wwLegalOverlay,#wwLegalPanel,[data-ww-legal-card]{display:none!important}}
+</style>
+
+<!-- ===== White Wolf Legal Pattern v1.0 ===== -->
+<div id="wwLegalOverlay" hidden>
+  <div class="ww-card" role="dialog" aria-modal="true" aria-labelledby="wwLegalTitle">
+    <div class="ww-appname">BookedSolid</div>
+    <h2 id="wwLegalTitle">Terms of Use</h2>
+    <p class="ww-updated" id="wwUpdatedNote" hidden>Our terms were updated (v1.0).</p>
+    <p class="ww-sum">Your data stays on your device.<br>Estimates are aids, not guarantees.<br>You&#39;re responsible for checking outputs before you rely on them.</p>
+    <p class="ww-follow">The full Terms and Disclaimer are one tap away, now and any time in Settings &#8594; Legal.</p>
+    <button type="button" class="ww-btn" id="wwReadTerms">Read the full Terms</button>
+    <button type="button" class="ww-btn" id="wwReadDisc">Read the Estimator Disclaimer</button>
+    <label class="ww-check"><input type="checkbox" id="wwAgreeCheck"> <span>I have read the disclaimer and I agree to the Terms of Use</span></label>
+    <button type="button" class="ww-btn ww-primary" id="wwAgree" disabled>I Agree</button>
+  </div>
+</div>
+<div id="wwLegalPanel" hidden>
+  <div class="ww-panel-inner">
+    <button type="button" id="wwLegalClose">&#8592; Back</button>
+    <h2>Legal</h2>
+    <p class="ww-accept" id="wwAcceptLine">You have not recorded acceptance of the Terms yet.</p>
+    <h3>Terms of Use</h3>
+    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Tree Service LLC, selling digital products under the name "White Wolf Digital"</strong> <strong>Contact: whitewolfoklahoma@gmail.com</strong></p>
+<hr>
+<h4>1. What you're buying</h4>
+<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other titles sold under White Wolf Digital) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
+<h4>2. Your license</h4>
+<ul>
+<li>You may use the app for your own personal or business work.</li>
+<li>You may open it on your own devices (phone, tablet, computer) and move your</li>
+</ul>
+<p>own data between them using the app's built-in backup/export tools.</p>
+<ul>
+<li>You may <strong>not</strong> resell, redistribute, give away, upload, or share the app</li>
+</ul>
+<p>file (or a copy of it) with anyone else — including posting it online, bundling it with other products, or selling access to it.</p>
+<ul>
+<li>You may <strong>not</strong> claim the app as your own work, remove its branding or</li>
+</ul>
+<p>notices, or use it to build a competing product for resale.</p>
+<ul>
+<li>One purchase = one buyer. A business purchase covers the buyer and their</li>
+</ul>
+<p>own employees using it for that business's work; it does not cover other businesses.</p>
+<h4>3. Your data stays yours — and stays on your device</h4>
+<ul>
+<li>The current versions of our apps run <strong>entirely on your device</strong>. They have</li>
+</ul>
+<p>no accounts, no sign-in, no analytics, and they collect, transmit, and store <strong>none</strong> of your information on any server. We never see your data.</p>
+<ul>
+<li>Your records are stored in your browser/app storage on your device. **You</li>
+</ul>
+<p>are responsible for backing them up** using the app's export tools. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, and we cannot recover them — we never had a copy.</p>
+<ul>
+<li>Files you export (backups, quotes, PDFs) are under your control. Where you</li>
+</ul>
+<p>store or send them is up to you.</p>
+<h4>4. Estimates are tools, not guarantees</h4>
+<p>Every number our apps produce — bids, prices, costs, calorie targets, projections, schedules, totals — is an <strong>estimate generated from the information you enter and the settings you choose</strong>. Outputs are aids for your own judgment, not guarantees of price, profit, outcome, or result. You are responsible for checking any output before relying on it (see also the disclaimer that applies to your app: Health Disclaimer for fitness/nutrition apps, Estimator Disclaimer for contractor tools). If an input is wrong, the output will be wrong.</p>
+<h4>5. Acceptable use</h4>
+<p>Don't use the apps to break the law, infringe anyone's rights, or misrepresent quotes, invoices, or records to your own customers. For the fitness apps, the guardrails in the app (healthy-rate limits, calorie floor) are part of the product — don't treat the app as a way around them.</p>
+<h4>6. Provided "as is"</h4>
+<p>The apps are provided <strong>"as is" and "as available," without warranties of any kind</strong>, express or implied — including merchantability, fitness for a particular purpose, accuracy of calculations, and uninterrupted or error-free operation — to the maximum extent allowed by law. Software has bugs; browsers change; we work to fix problems but do not promise any app is error-free or will work on every device or browser forever.</p>
+<h4>7. Limitation of liability</h4>
+<p>To the maximum extent allowed by law:</p>
+<ul>
+<li>We are **not liable for indirect, incidental, special, or consequential</li>
+</ul>
+<p>damages** — including lost profits, lost or mispriced jobs, lost data, or business interruption — arising from use of the apps.</p>
+<ul>
+<li>Our total liability for any claim connected to an app is limited to the</li>
+</ul>
+<p><strong>amount you paid for that app</strong>.</p>
+<ul>
+<li>Nothing in these terms limits liability that cannot legally be limited.</li>
+</ul>
+<h4>8. Refunds</h4>
+<p>Refunds are handled <strong>by the storefront you bought from, under that storefront's policy</strong> — Gumroad's refund policy for Gumroad purchases, and Google Play's refund policy for Play purchases. These terms do not add to, replace, or override the storefront's refund rules. If a file is defective and won't open, contact us at whitewolfoklahoma@gmail.com and we'll fix or replace the file.</p>
+<h4>9. Updates and changes to these terms</h4>
+<ul>
+<li>We may release updated versions of an app. Updates may add, change, or</li>
+</ul>
+<p>remove features.</p>
+<ul>
+<li>We may update these terms. The version you agreed to is recorded in the</li>
+</ul>
+<p>app (version number and date) at first-run acceptance. If terms change, the app may ask you to accept the new version once on next open. Updated terms apply going forward, not retroactively.</p>
+<ul>
+<li>If you don't agree to an updated version of the terms, stop using the app.</li>
+</ul>
+<h4>10. Governing law</h4>
+<p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA. (Attorney to confirm governing law and venue before publication.)</p>
+<h4>11. Contact</h4>
+<p>White Wolf Tree Service LLC (White Wolf Digital) — whitewolfoklahoma@gmail.com.</p>
+<hr>
+<h4>CONNECTED FEATURES — takes effect only when these features ship</h4>
+<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They do not apply to the current offline versions, which never transmit data.</em></p>
+<ul>
+<li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
+</ul>
+<p>your separate, explicit consent — on its own consent screen, in plain language — before anything leaves your device. Declining never disables the app's offline features.</p>
+<ul>
+<li><strong>What gets sent.</strong> Only what the consent screen names, only when you use</li>
+</ul>
+<p>the feature: for example, a meal description (text, or audio only if cloud transcription is on) for AI voice logging, or the single photo you choose for an AI Goal Preview.</p>
+<ul>
+<li><strong>No retention by us.</strong> Our relay service passes your request to the named</li>
+</ul>
+<p>AI provider and keeps nothing — no copies of your photos, audio, transcripts, or entries are stored on our servers. Provider handling is described on the consent screen and in the Privacy Policy.</p>
+<ul>
+<li><strong>Health data stays on the device.</strong> Device sync (Health Connect) reads</li>
+</ul>
+<p>your health data on your phone and stores it in the app on your phone. It is not uploaded to us.</p>
+<ul>
+<li><strong>Allowances.</strong> Some connected features run on third-party AI services we</li>
+</ul>
+<p>pay for per use, so they may include a monthly allowance described in the app (for example, a set number of AI previews or voice entries per month), with optional additional credits. Allowances and pricing will be shown in the app before you use the feature; they are not a subscription unless the app says so in plain words.</p>
+<ul>
+<li><strong>Permissions.</strong> Connected features may request device permissions (such</li>
+</ul>
+<p>as Health Connect access or the microphone) at the moment you first use them. You can revoke permissions any time in your device settings; the related feature will simply stop working.</p>
+    <h3>Estimator Disclaimer</h3>
+<p><strong>Applies to: TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, FieldForms Toolkit, PaintPro, FenceDeck, MarketMaker, and the other estimating/pricing tools sold under White Wolf Digital — including bundles that contain them.</strong></p>
+<h4>Estimating aids, not finished quotes</h4>
+<ul>
+<li>These apps are <strong>estimating and record-keeping aids</strong>. Every bid, price,</li>
+</ul>
+<p>cost, measurement, and total they produce is an <strong>estimate based on the information and rates you enter</strong>.</p>
+<ul>
+<li>**You — the business owner — are responsible for verifying everything</li>
+</ul>
+<p>before you quote a customer:** measurements and quantities, site conditions, your current material and labor costs, your rates and margins, taxes, permit and license requirements, disposal rules, and any contract terms.</p>
+<ul>
+<li>Default rates, presets, and sample data included in the apps are starting</li>
+</ul>
+<p>points only. They are not market prices, not industry standards, and not a recommendation of what you should charge.</p>
+<ul>
+<li>A saved quote keeps the prices in effect when you created it (price</li>
+</ul>
+<p>snapshot). Changing your presets later does not change saved quotes — and a saved quote is still your responsibility to review before sending.</p>
+<h4>Specific tools</h4>
+<ul>
+<li><strong>TreeBid Pro:</strong> tree work is dangerous and site-specific. Difficulty</li>
+</ul>
+<p>factors and presets cannot see the actual tree, lean, rot, targets, or access. Inspect every job in person before final pricing. The "Invoice with Wave" feature is an open-and-paste handoff — TreeBid does not connect to Wave, and the invoice you send from Wave is yours.</p>
+<ul>
+<li><strong>RoofSquares / measurement tools:</strong> confirm roof measurements and pitch</li>
+</ul>
+<p>in person or by your usual method before ordering materials.</p>
+<ul>
+<li><strong>SnowBid / seasonal tools:</strong> route times, snowfall amounts, and service</li>
+</ul>
+<p>pricing vary by storm and site; seasonal contracts are your agreement with your customer, on your terms.</p>
+<ul>
+<li><strong>JobProfit Tracker:</strong> profit figures depend on the costs you enter.</li>
+</ul>
+<p>The app is not accounting or tax software and does not replace your bookkeeper or accountant.</p>
+<h4>Bottom line</h4>
+<p>If an output and your judgment disagree, trust your judgment — then fix the input. We are not responsible for jobs won, lost, or mispriced based on app outputs, within the limits of the Terms of Use.</p>
+    <h3>Privacy</h3>
+    <p>This app has no accounts and collects no data. Everything you enter is stored only on your device, in your browser/app storage, and is never uploaded, transmitted, or shared. We never see your data. Files you export (backups, quotes, PDFs) are under your control &mdash; store and send them only where you choose. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so export backups regularly.</p>
+    <p class="ww-seller">Sold by White Wolf Tree Service LLC (White Wolf Digital) &mdash; whitewolfoklahoma@gmail.com</p>
+  </div>
+</div>
+
+<script>
+/* ===== White Wolf Legal Pattern v1.0 ===== */
+(function(){
+"use strict";
+var TERMS_VERSION = "1.0";
+var WW_KEY = "bookedsolid_v1";
+var WW_HAS_DISC = true;
+var WWREC = null;
+function wwValid(r){ return r && typeof r === "object" && typeof r.termsVersion === "string" && !!r.termsVersion; }
+function wwVerCmp(a,b){ var pa=String(a).split("."), pb=String(b).split("."); for(var i=0;i<3;i++){ var x=parseInt(pa[i]||"0",10)||0, y=parseInt(pb[i]||"0",10)||0; if(x<y) return -1; if(x>y) return 1; } return 0; }
+function wwReadStored(){ try{ var raw = localStorage.getItem(WW_KEY); if(!raw) return null; var o = JSON.parse(raw); return (o && typeof o === "object") ? o : null; }catch(e){ return null; } }
+var _wwStored = wwReadStored();
+if(_wwStored && wwValid(_wwStored.legal)) WWREC = _wwStored.legal;
+try{
+  var _wwOrigSet = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function(k,v){
+    if(k === WW_KEY && typeof v === "string"){
+      try{ var o = JSON.parse(v); if(o && typeof o === "object" && !Array.isArray(o)){
+        if(wwValid(o.legal)){ WWREC = o.legal; }
+        else if(WWREC){ o.legal = WWREC; v = JSON.stringify(o); }
+      } }catch(e){}
+    }
+    return _wwOrigSet(k,v);
+  };
+}catch(e){}
+function wwSyncState(){ try{ if(typeof S !== "undefined" && S && typeof S === "object" && WWREC) S.legal = WWREC; }catch(e){} }
+function wwPersist(){
+  wwSyncState();
+  try{ save() }catch(e){}
+  try{ var o = wwReadStored(); if(o){ o.legal = WWREC; localStorage.setItem(WW_KEY, JSON.stringify(o)); } }catch(e){}
+}
+function wwAcceptLine(){
+  var el = document.getElementById("wwAcceptLine"); if(!el) return;
+  if(WWREC && WWREC.acceptedDate){ el.textContent = "You agreed to Terms v" + WWREC.termsVersion + " on " + WWREC.acceptedDate + "."; }
+  else { el.textContent = "You have not recorded acceptance of the Terms yet."; }
+}
+function wwOpenLegal(){ var p = document.getElementById("wwLegalPanel"); if(p){ p.hidden = false; p.scrollTop = 0; } wwAcceptLine(); }
+function wwCloseLegal(){ var p = document.getElementById("wwLegalPanel"); if(p) p.hidden = true; }
+function wwInit(){
+  var overlay = document.getElementById("wwLegalOverlay");
+  var agree = document.getElementById("wwAgree");
+  var rt = document.getElementById("wwReadTerms");
+  var rd = document.getElementById("wwReadDisc");
+  var close = document.getElementById("wwLegalClose");
+  if(rt) rt.addEventListener("click", wwOpenLegal);
+  if(rd) rd.addEventListener("click", wwOpenLegal);
+  if(close) close.addEventListener("click", wwCloseLegal);
+  var agreeCheck = document.getElementById("wwAgreeCheck");
+  if(agree) agree.disabled = !(agreeCheck && agreeCheck.checked);
+  if(agreeCheck && agree) agreeCheck.addEventListener("change", function(){ agree.disabled = !agreeCheck.checked; });
+  if(agree) agree.addEventListener("click", function(){
+    if(agree.disabled || !(agreeCheck && agreeCheck.checked)) return;
+    WWREC = { termsVersion: TERMS_VERSION, acceptedDate: new Date().toISOString().slice(0,10), disclaimerShown: WW_HAS_DISC };
+    wwPersist(); wwAcceptLine();
+    if(overlay) overlay.hidden = true;
+  });
+  wwSyncState(); wwAcceptLine();
+  if(!WWREC || wwVerCmp(WWREC.termsVersion, TERMS_VERSION) < 0){
+    if(WWREC){ var note = document.getElementById("wwUpdatedNote"); if(note) note.hidden = false; }
+    if(overlay) overlay.hidden = false;
+  }
+  var anchors = [{sel:"#view-settings",marker:"Backup"}];
+  function wwEnsureBtn(){
+    for(var i=0;i<anchors.length;i++){
+      var a = anchors[i]; var el = document.querySelector(a.sel); if(!el) continue;
+      if(el.querySelector("[data-ww-legal-btn]")) continue;
+      var txt = el.textContent || "";
+      if(a.marker){ if(txt.toLowerCase().indexOf(a.marker.toLowerCase()) < 0) continue; }
+      else if(txt.replace(/\s+/g,"").length < 40) continue;
+      var card = document.createElement("div");
+      card.setAttribute("data-ww-legal-card","");
+      card.innerHTML = "<h3 style=\"margin:0 0 6px\">Legal</h3><p style=\"margin:0 0 10px\">Terms of Use, disclaimer and privacy for this app.</p>";
+      var b = document.createElement("button");
+      b.type = "button"; b.setAttribute("data-ww-legal-btn",""); b.textContent = "View Legal \u2014 Terms, Disclaimer & Privacy";
+      b.addEventListener("click", wwOpenLegal);
+      card.appendChild(b); el.appendChild(card);
+    }
+  }
+  wwEnsureBtn();
+  setInterval(wwEnsureBtn, 700);
+}
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", wwInit); else wwInit();
+})();
+</script>
+</body>
+</html>
