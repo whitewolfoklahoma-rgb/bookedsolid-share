@@ -38,6 +38,8 @@ h2{font-size:17px; margin:2px 0 10px;} h3{font-size:15px; margin:14px 0 8px;}
 .btn.danger{background:var(--danger); border-color:var(--danger);}
 .btn.small{min-height:36px; padding:6px 10px; font-size:13px;min-height:40px;}
 .btn:disabled{opacity:.45; cursor:not-allowed;}
+.gcal{display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:48px; padding:10px 16px; border-radius:9px; background:var(--brand); color:#fff; font-weight:700; text-decoration:none; border:1px solid var(--brand); font-size:14px; cursor:pointer;}
+.xlink{display:inline-flex; align-items:center; min-height:48px; padding:10px 14px; margin:4px 8px 4px 0; border:1px solid var(--brand); border-radius:9px; color:var(--brand2); font-weight:700; text-decoration:none; background:#fff; font-size:14px;}
 .btnrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
 input,select,textarea{width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px;
   font-size:15px; background:#fff; color:var(--ink); min-height:42px;}
@@ -140,7 +142,8 @@ footer{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); 
 </main>
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
-<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.</footer>
+<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.<br><b>BookedSolid v1.1</b>
+<div style="margin-top:6px">Works with: <a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/branchmath-share/" target="_blank" rel="noopener">Bid the job — TreeBid Pro</a><a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/treefinder-share/" target="_blank" rel="noopener">Find tree jobs — TreeFinder</a></div></footer>
 <script>
 "use strict";
 /* ============================== utilities ============================== */
@@ -302,7 +305,91 @@ function fitWaitlist(freed){
     return dayOk&&need<=freed.blockMin;
   });
 }
-window.BS={checkConflicts,apptEndMin,apptServiceEndMin,fillTemplate,clientStats,moneyReport,stillOwed,totalStillOwed,fitWaitlist,toMin,toTime,money,PRESETS};
+/* ================= Google Calendar handoff (offline-honest) =================
+   BookedSolid has no backend and no sign-in, so it cannot silently sync.
+   What it CAN do: hand one appointment (or a whole .ics file of them) to
+   Google Calendar with everything already filled in. The user taps Save
+   there. All times are built from the appointment's local date/time on the
+   user's device and converted to UTC. */
+const APP_VERSION="1.1";
+function fmtUTC(d){return d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");}
+function apptStartDt(a){const p=String(a.date||"").split("-");const t=String(a.start||"09:00").split(":");
+  return new Date(+p[0],(+p[1]||1)-1,+p[2]||1,+t[0]||0,+t[1]||0);}
+function apptEndDt(a){return new Date(apptStartDt(a).getTime()+((Number(a.duration)||0)*60000));}
+function seriesList(a){if(!a||!a.seriesId)return a?[a]:[];
+  return S.appointments.filter(x=>x.seriesId===a.seriesId)
+    .sort((x,y)=>(x.date+x.start).localeCompare(y.date+y.start));}
+/* A series is stored as individual appointments sharing a seriesId — the
+   repeat choice itself is not stored. Rebuild an RRULE only when the stored
+   occurrence dates follow one clean pattern (weekly / every 2 weeks /
+   monthly); otherwise return null and the caller links the one appointment. */
+function seriesRule(a){
+  const list=seriesList(a);if(!a||!a.seriesId||list.length<2)return null;
+  const dayMs=86400000;
+  const dayNum=s=>{const p=String(s).split("-");return Date.UTC(+p[0],(+p[1]||1)-1,+p[2]||1)/dayMs;};
+  const gaps=[];for(let i=1;i<list.length;i++)gaps.push(dayNum(list[i].date)-dayNum(list[i-1].date));
+  let freq=null,interval=1;
+  if(gaps.every(g=>g===7)){freq="WEEKLY";}
+  else if(gaps.every(g=>g===14)){freq="WEEKLY";interval=2;}
+  else{const mi=s=>{const p=String(s).split("-");return (+p[0])*12+(+p[1]-1);};
+    if(gaps.every((g,i)=>mi(list[i+1].date)-mi(list[i].date)===1))freq="MONTHLY";}
+  if(!freq)return null;
+  const last=list[list.length-1];
+  return {rrule:"RRULE:FREQ="+freq+(interval>1?";INTERVAL="+interval:"")+";UNTIL="+fmtUTC(apptStartDt(last)),
+    first:list[0],count:list.length};
+}
+function gcalDetails(a){
+  const c=clientById(a.clientId);const L=[];
+  L.push("Client: "+(c?c.name:"(deleted client)"));
+  if(c&&c.phone)L.push("Phone: "+c.phone);
+  L.push("Service: "+a.serviceName);
+  L.push("Price: "+money(a.price));
+  if(a.deposit&&Number(a.deposit.amount)>0)
+    L.push("Deposit recorded: "+money(a.deposit.amount)+(a.deposit.method?" ("+a.deposit.method+")":"")+" — recorded only; BookedSolid never collects payments");
+  else L.push("Deposit: none recorded");
+  L.push(a.paid?"Paid in full":"Not marked paid"+(stillOwed(a)>0?" — still owed "+money(stillOwed(a)):""));
+  L.push("Status: "+a.status);
+  if(a.buffer)L.push("Buffer after: "+a.buffer+" min (travel/prep — not part of the visit itself)");
+  if(a.notes)L.push("Notes: "+a.notes);
+  L.push("Booked in BookedSolid v"+APP_VERSION+" (offline book — later edits there do not change this calendar copy)");
+  return L.join("\n");
+}
+function gcalTarget(a){const rule=seriesRule(a);
+  return rule?{appt:rule.first,rule:rule}:{appt:a,rule:null};}
+function gcalUrl(a){
+  const t=gcalTarget(a);const x=t.appt;const c=clientById(x.clientId);
+  const q=new URLSearchParams();
+  q.set("action","TEMPLATE");
+  q.set("text",(c?c.name:"Client")+" — "+x.serviceName);
+  q.set("dates",fmtUTC(apptStartDt(x))+"/"+fmtUTC(apptEndDt(x)));
+  q.set("details",gcalDetails(x));
+  if(t.rule)q.set("recur",t.rule.rrule);
+  return "https://calendar.google.com/calendar/render?"+q.toString();
+}
+function icsEscape(s){return String(s==null?"":s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r\n|\r|\n/g,"\\n");}
+function icsFold(line){let out="";let cur="";
+  for(const ch of line){cur+=ch;if(cur.length>=73){out+=cur+"\r\n ";cur="";}}
+  return out+cur;}
+function apptToICS(a,stamp){
+  const c=clientById(a.clientId);
+  const lines=["BEGIN:VEVENT","UID:"+icsEscape(a.id)+"@bookedsolid.local",
+    "DTSTAMP:"+stamp,"DTSTART:"+fmtUTC(apptStartDt(a)),"DTEND:"+fmtUTC(apptEndDt(a)),
+    "SUMMARY:"+icsEscape((c?c.name:"Client")+" — "+a.serviceName),
+    "DESCRIPTION:"+icsEscape(gcalDetails(a)),
+    "STATUS:"+(a.status==="cancelled"?"CANCELLED":"CONFIRMED"),"END:VEVENT"];
+  return lines.map(icsFold).join("\r\n");
+}
+function buildICS(list){
+  const stamp=fmtUTC(new Date());
+  const parts=["BEGIN:VCALENDAR","VERSION:2.0",
+    "PRODID:-//White Wolf Digital//BookedSolid "+APP_VERSION+"//EN",
+    "CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  list.forEach(a=>parts.push(apptToICS(a,stamp)));
+  parts.push("END:VCALENDAR");
+  return parts.join("\r\n")+"\r\n";
+}
+window.BS={checkConflicts,apptEndMin,apptServiceEndMin,fillTemplate,clientStats,moneyReport,stillOwed,totalStillOwed,fitWaitlist,toMin,toTime,money,PRESETS,
+  APP_VERSION,gcalUrl,gcalTarget,gcalDetails,seriesRule,seriesList,buildICS,apptToICS,fmtUTC,apptStartDt,apptEndDt};
 </script>
 <script>
 "use strict";
@@ -398,6 +485,7 @@ function apptCard(a){
    (a.notes?'<div class="meta">📝 '+esc(a.notes.slice(0,120))+"</div>":"")+
    (a.deposit&&a.deposit.amount>0?'<div class="meta">💵 Deposit recorded: '+money(a.deposit.amount)+(a.deposit.method?" via "+esc(a.deposit.method):"")+"</div>":"")+
    '<div class="meta">💰 Still owed: '+money(stillOwed(a))+"</div>"+
+   '<div class="btnrow noprint" style="margin-top:8px"><a class="gcal" target="_blank" rel="noopener" onclick="event.stopPropagation()" data-gcal="'+a.id+'" href="'+esc(gcalUrl(a))+'">'+(seriesRule(a)?"📅 Add series to Google Calendar":"📅 Add to Google Calendar")+"</a></div>"+
    "</div>";
 }
 function colorOf(a){const s=svcById(a.serviceId);return s?s.color:"#0f766e";}
@@ -459,7 +547,8 @@ function dayList(date){
     html+=apptCard(a);prevEnd=Math.max(prevEnd||0,apptEndMin(a));
   }
   html+='<div class="btnrow noprint"><button class="btn secondary" onclick="quickBook(\''+date+'\')">+ Book this day</button>'+
-    '<button class="btn ghost" onclick="printDay()">🖨 Print day sheet</button></div>';
+    '<button class="btn ghost" onclick="printDay()">🖨 Print day sheet</button>'+
+    '<button class="btn ghost" onclick="exportDayICS(\''+date+'\')">⬇ Export day (.ics)</button></div>';
   return html;
 }
 function weekHtml(anchor){
@@ -491,6 +580,15 @@ function monthHtml(anchor){
 }
 function quickBook(date){showTab("book");const di=$("#bkDate");if(di)di.value=date;}
 function printDay(){calView="day";renderCalendar();setTimeout(()=>window.print(),50);}
+function downloadICS(list,filename){
+  if(!list.length){toast("No appointments to export");return;}
+  const blob=new Blob([buildICS(list)],{type:"text/calendar"});
+  const u=URL.createObjectURL(blob);const a2=document.createElement("a");
+  a2.href=u;a2.download=filename;a2.click();
+  setTimeout(()=>URL.revokeObjectURL(u),2000);
+  toast("Calendar file downloaded — in Google Calendar: Settings → Import & export → Import");
+}
+function exportDayICS(date){downloadICS(dayAppts(date),"bookedsolid-"+date+".ics");}
 </script>
 <script>
 "use strict";
@@ -518,6 +616,8 @@ function openAppt(id){
    '<div class="btnrow"><button class="btn secondary small" id="apPaid">'+(a.paid?"Mark unpaid":"Mark paid")+"</button>"+
    '<button class="btn ghost small" id="apEdit">Edit time / details</button>'+
    '<button class="btn danger small" id="apDelete">Delete</button></div>'+
+   '<div class="btnrow"><a class="gcal" id="apGcal" target="_blank" rel="noopener" href="'+esc(gcalUrl(a))+'">'+(seriesRule(a)?"📅 Add series to Google Calendar":"📅 Add to Google Calendar")+"</a></div>"+
+   '<p class="small">'+(seriesRule(a)?"Adds the whole series to Google Calendar, starting from its first visit. ":"")+'Opens Google Calendar with the appointment filled in — you tap Save there. BookedSolid does not sync by itself.</p>'+
    "<h3>📋 Reminder texts — tap to copy, paste into your messaging app</h3>"+
    '<div class="grid2"><div><label>Template</label><select id="apTpl">'+tplOpts+"</select></div>"+
    '<div style="display:flex;align-items:flex-end"><button class="btn" id="apCopy" style="width:100%">Copy text</button></div></div>'+
@@ -894,6 +994,8 @@ function renderSettings(){
    '<p class="small">"Clear demo data" removes ONLY the sample business, clients, appointments, waitlist entry and sample pack. Your real data is never touched by it.</p></div>';
   html+='<div class="card"><h2>💾 Backup — your book is a file you own</h2>'+
    '<div class="btnrow"><button class="btn secondary" id="bkExport">Export backup (.json)</button></div>'+
+   '<div class="btnrow"><button class="btn secondary" id="bkExportIcs" style="min-height:48px">📅 Export upcoming appointments (.ics for Google Calendar)</button></div>'+
+   '<p class="small">Downloads one calendar file with every upcoming appointment. In Google Calendar: Settings → Import &amp; export → Import, then pick the file. BookedSolid itself stays offline — the file is the bridge, and new or changed bookings are not synced automatically.</p>'+
    '<label>Import a backup file</label><input type="file" id="bkImportFile" accept=".json,application/json">'+
    '<div id="bkMsg"></div>'+
    '<div class="btnrow"><button class="btn danger" id="wipeAll">Erase EVERYTHING and start over</button></div></div>';
@@ -904,7 +1006,9 @@ function renderSettings(){
    "<p><b>Reminders:</b> open an appointment → pick a template → Copy text → paste into your messaging app. The {placeholders} fill themselves in.</p>"+
    "<p><b>No-shows:</b> mark them. The client file counts them, flags repeat offenders, and the Money tab shows exactly what no-shows cost you — the case for requiring deposits, made in your own numbers.</p>"+
    "<p><b>Packs:</b> extra industry content (services, templates, intake questions) sold separately as <i>bookedsolid-pack-v1</i> JSON files. Import them in the Packs tab. A free Sample Mini-Pack is included with the demo so you can see exactly how packs work.</p>"+
-   "<p><b>Your data:</b> everything lives in this browser on this device. Export a backup weekly and keep it somewhere safe — if you clear your browser data without a backup, the book is gone.</p></div>";
+   "<p><b>Google Calendar:</b> every appointment carries an <b>Add to Google Calendar</b> button — on its card in the day view, and in the detail view when you open it. Tap it and Google Calendar opens with the visit already filled in (client, service, time, phone, notes, deposit status); check it and tap <b>Save</b> there. On a recurring series, the button adds the whole series starting from its first visit. To move everything at once instead, use <b>Export upcoming appointments (.ics)</b> in the Backup card above and import that file in Google Calendar (Settings → Import &amp; export → Import). Honest limit: BookedSolid is an offline book and does <b>not</b> sync by itself — a booking you add or change here reaches Google Calendar only when you tap its button or run a fresh export.</p>"+
+   "<p><b>Your data:</b> everything lives in this browser on this device. Export a backup weekly and keep it somewhere safe — if you clear your browser data without a backup, the book is gone.</p>"+
+   '<p><a class="btn secondary" id="helpEmail" style="min-height:48px" href="mailto:whitewolfbackoffice@gmail.com?subject='+encodeURIComponent("BookedSolid help — v"+APP_VERSION)+"&body="+encodeURIComponent("Tell us what you were trying to do and what happened:\n\n")+'">✉️ Email us for help</a></p></div>';
   el.innerHTML=html;
   let editingSvc=null;
   const resetSvcForm=()=>{editingSvc=null;$("#svFormTitle").textContent="Add a service";
@@ -968,6 +1072,10 @@ function renderSettings(){
     const u=URL.createObjectURL(blob);const a=document.createElement("a");
     a.href=u;a.download="bookedsolid-backup-"+todayStr()+".json";a.click();
     setTimeout(()=>URL.revokeObjectURL(u),2000);};
+  $("#bkExportIcs").onclick=()=>{
+    const up=S.appointments.filter(a=>a.date>=todayStr()&&a.status!=="cancelled")
+      .sort((x,y)=>(x.date+x.start).localeCompare(y.date+y.start));
+    downloadICS(up,"bookedsolid-upcoming-"+todayStr()+".ics");};
   $("#bkImportFile").onchange=e=>{const f=e.target.files[0];if(!f)return;
     const r=new FileReader();
     r.onload=()=>{try{const p=JSON.parse(String(r.result));
