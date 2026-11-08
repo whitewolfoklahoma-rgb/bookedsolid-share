@@ -142,8 +142,8 @@ footer{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); 
 </main>
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
-<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.<br><b>BookedSolid v1.1</b>
-<div style="margin-top:6px">Works with: <a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/branchmath-share/" target="_blank" rel="noopener">Bid the job — TreeBid Pro</a><a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/treefinder-share/" target="_blank" rel="noopener">Find tree jobs — TreeFinder</a></div></footer>
+<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.<br><b>BookedSolid v1.1.2</b>
+<div style="margin-top:6px">Works with: <a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/branchmath-share/" target="_blank" rel="noopener">Bid the job — BranchMath</a><a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/treefinder-share/" target="_blank" rel="noopener">Find tree jobs — TreeFinder</a></div></footer>
 <script>
 "use strict";
 /* ============================== utilities ============================== */
@@ -170,6 +170,9 @@ function toast(msg){const r=$("#toastRoot");r.innerHTML='<div class="toast">'+es
 
 /* ============================== state ============================== */
 const LS_KEY="bookedsolid_v1";
+const BACKUP_KEY=LS_KEY+"_backup";
+const CORRUPT_KEY=LS_KEY+"_corrupt";
+var RECOVERY_NOTICE="";
 let S=null;
 function defaultHours(){const h={};for(let d=0;d<7;d++){h[d]={open:d!==0,start:"09:00",end:"17:00",breaks:[]};}
   h[6]={open:true,start:"09:00",end:"15:00",breaks:[]};return h;}
@@ -184,12 +187,68 @@ function defaultState(){return {
   ],
   packs:[],presetLoaded:"",demoLoaded:false
 };}
-function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
-function load(){try{const raw=localStorage.getItem(LS_KEY);if(raw){const p=JSON.parse(raw);
-  if(p&&typeof p==="object"&&p.settings){S=Object.assign(defaultState(),p);
-    S.settings=Object.assign(defaultState().settings,p.settings||{});
-    if(!S.hours)S.hours=defaultHours();return;}}}catch(e){}
+function save(){try{var __raw=JSON.stringify(S);localStorage.setItem(LS_KEY,__raw);localStorage.setItem(BACKUP_KEY,__raw);}catch(e){}}
+/* v1.1.3 reconciliation fix (Wave 2 pre-existing S2): the old falsy-only
+   check let a truthy but wrong-typed `hours` through, and renderSettings()
+   then threw on S.hours[d].open — the Settings screen never rendered.
+   Validate the hours shape entry-by-entry, field-by-field (BinderClock
+   v0.1.1 pattern): a malformed container falls back to defaultHours(), a
+   malformed day falls back to that day's defaults, and malformed fields
+   fall back individually. Fully valid data passes through value-identical
+   (unknown extra fields on an entry are preserved). */
+function sanitizeHours(h){
+  const def=defaultHours();
+  if(!h||typeof h!=="object"||Array.isArray(h))return def;
+  const out={};
+  for(let d=0;d<7;d++){
+    const e=h[d],f=def[d];
+    if(!e||typeof e!=="object"||Array.isArray(e)){out[d]=f;continue;}
+    const o=Object.assign({},e);
+    o.open=(typeof e.open==="boolean")?e.open:f.open;
+    o.start=(typeof e.start==="string"&&/^\d{2}:\d{2}$/.test(e.start))?e.start:f.start;
+    o.end=(typeof e.end==="string"&&/^\d{2}:\d{2}$/.test(e.end))?e.end:f.end;
+    o.breaks=Array.isArray(e.breaks)?e.breaks.filter(b=>b&&typeof b==="object"&&typeof b.start==="string"&&typeof b.end==="string"):[];
+    out[d]=o;
+  }
+  return out;
+}
+function applyStored(p){S=Object.assign(defaultState(),p);
+  const ps=(p.settings&&typeof p.settings==="object"&&!Array.isArray(p.settings))?p.settings:{};
+  S.settings=Object.assign(defaultState().settings,ps);
+  /* Same entry-level guard for the list fields: a wrong-typed list (the
+     recovery drill's appointments:42) used to throw in the day view's
+     .filter at load. Valid arrays pass through untouched. */
+  const defs=defaultState();
+  ["services","clients","appointments","waitlist","templates","packs"].forEach(function(k){if(!Array.isArray(S[k]))S[k]=defs[k];});
+  S.hours=sanitizeHours(p.hours);}
+function load(){var raw=null;try{raw=localStorage.getItem(LS_KEY);}catch(e){}
+  if(raw){var p=null;try{p=JSON.parse(raw);}catch(e){}
+    if(p&&typeof p==="object"&&!Array.isArray(p)&&p.settings){applyStored(p);
+      try{localStorage.setItem(BACKUP_KEY,raw);}catch(e){}return;}
+    /* Damaged data: preserve the raw copy under its own key, restore the last
+       good backup if there is one, and say so out loud — never silently
+       wipe the book and swap in the sample business. */
+    try{localStorage.setItem(CORRUPT_KEY,raw);}catch(e){}
+    var braw=null;try{braw=localStorage.getItem(BACKUP_KEY);}catch(e){}
+    if(braw){var bp=null;try{bp=JSON.parse(braw);}catch(e){}
+      if(bp&&typeof bp==="object"&&!Array.isArray(bp)&&bp.settings){applyStored(bp);
+        RECOVERY_NOTICE="Your saved BookedSolid book couldn't be read, so your last good backup was restored. The damaged copy was preserved under the storage key \""+CORRUPT_KEY+"\" — nothing was deleted.";
+        save();return;}}
+    RECOVERY_NOTICE="Your saved BookedSolid book couldn't be read and no good backup was found, so the sample book was loaded so you can keep working. The damaged copy was preserved under the storage key \""+CORRUPT_KEY+"\" — nothing was deleted.";
+  }
   S=defaultState();}
+function showRecoveryBanner(){
+  if (!RECOVERY_NOTICE || document.getElementById("recoveryBanner")) return;
+  var d = document.createElement("div");
+  d.id = "recoveryBanner"; d.setAttribute("role", "alert");
+  d.style.cssText = "background:#fff3cd;border-bottom:3px solid #e8a13a;color:#5b4300;padding:12px 16px;font:600 15px/1.45 system-ui,sans-serif;text-align:center;position:relative;z-index:9999";
+  var span = document.createElement("span"); span.textContent = RECOVERY_NOTICE + " ";
+  var b = document.createElement("button"); b.textContent = "OK — got it"; b.style.cssText = "margin-left:8px;padding:6px 14px;font-weight:700;cursor:pointer";
+  b.onclick = function(){ d.remove(); };
+  d.appendChild(span); d.appendChild(b);
+  document.body.insertBefore(d, document.body.firstChild);
+}
+(function(){ var tries = 0; function attempt(){ if (RECOVERY_NOTICE){ showRecoveryBanner(); return; } if (++tries <= 20) setTimeout(attempt, 150); } if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", attempt); attempt(); })();
 
 /* ============================== presets ============================== */
 const PRESETS={
@@ -311,7 +370,7 @@ function fitWaitlist(freed){
    Google Calendar with everything already filled in. The user taps Save
    there. All times are built from the appointment's local date/time on the
    user's device and converted to UTC. */
-const APP_VERSION="1.1";
+const APP_VERSION="1.1.3";
 function fmtUTC(d){return d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");}
 function apptStartDt(a){const p=String(a.date||"").split("-");const t=String(a.start||"09:00").split(":");
   return new Date(+p[0],(+p[1]||1)-1,+p[2]||1,+t[0]||0,+t[1]||0);}
@@ -382,7 +441,7 @@ function apptToICS(a,stamp){
 function buildICS(list){
   const stamp=fmtUTC(new Date());
   const parts=["BEGIN:VCALENDAR","VERSION:2.0",
-    "PRODID:-//White Wolf Digital//BookedSolid "+APP_VERSION+"//EN",
+    "PRODID:-//White Wolf Apps//BookedSolid "+APP_VERSION+"//EN",
     "CALSCALE:GREGORIAN","METHOD:PUBLISH"];
   list.forEach(a=>parts.push(apptToICS(a,stamp)));
   parts.push("END:VCALENDAR");
@@ -952,15 +1011,17 @@ function renderPacks(){
 }
 
 /* ============================== settings & help ============================== */
+var BS_OPEN={};
 function renderSettings(){
   const el=$("#view-settings");const st=S.settings;
+  el.querySelectorAll("details[data-keep]").forEach(d=>{BS_OPEN[d.getAttribute("data-keep")]=d.open;});
   let html='<div class="card"><h2>⚙️ Business settings</h2>'+
    '<div class="grid2"><div><label>Business name</label><input id="stBiz" value="'+esc(st.businessName)+'"></div>'+
    '<div><label>Your name</label><input id="stOwner" value="'+esc(st.ownerName||"")+'"></div></div>'+
    '<div class="grid2"><div><label>Phone</label><input id="stPhone" value="'+esc(st.phone)+'"></div>'+
    '<div><label>Email</label><input id="stEmail" value="'+esc(st.email)+'"></div></div>'+
    '<div class="btnrow"><button class="btn" id="stSave">Save settings</button></div></div>';
-  html+='<div class="card"><h2>🕐 Business hours &amp; breaks</h2>';
+  html+='<div class="card"><details class="bsx" data-keep="hours"'+(BS_OPEN.hours?" open":"")+'><summary style="font-size:17px;font-weight:700;cursor:pointer;min-height:44px;padding:6px 0">Hours ▸ 🕐 Business hours &amp; breaks</summary>';
   for(let d=0;d<7;d++){const h=S.hours[d];
     html+='<div class="dayoffrow"><span class="dname">'+DOWS[d]+'</span>'+
      '<label style="margin:0"><input type="checkbox" id="hr_open_'+d+'" '+(h.open?"checked":"")+' style="width:auto;min-height:0"> Open</label>'+
@@ -970,28 +1031,28 @@ function renderSettings(){
      '<label style="margin:0">Break <input type="time" id="br_start_'+d+'" style="width:118px"> to <input type="time" id="br_end_'+d+'" style="width:118px"></label>'+
      '<button class="btn ghost small" data-break="'+d+'">+ Add break</button>'+
      ((h.breaks||[]).length?'<button class="btn ghost small" data-breakdel="'+d+'">Clear breaks</button>':"")+"</div>";}
-  html+='<div class="btnrow"><button class="btn" id="hrSave">Save hours</button></div></div>';
-  html+='<div class="card"><h2>🧰 Services</h2><div id="svList"></div>'+
+  html+='<div class="btnrow"><button class="btn" id="hrSave">Save hours</button></div></details></div>';
+  html+='<div class="card"><details class="bsx" data-keep="services"'+(BS_OPEN.services?" open":"")+'><summary style="font-size:17px;font-weight:700;cursor:pointer;min-height:44px;padding:6px 0">Services ▸ 🧰 Services</summary><div id="svList"></div>'+
    '<h3 id="svFormTitle">Add a service</h3><div class="grid3"><div><label>Name</label><input id="svName"></div>'+
    '<div><label>Duration (minutes)</label><input inputmode="decimal" type="number" id="svDur" value="60" min="5" step="5"></div>'+
    '<div><label>Buffer after (travel/prep, minutes)</label><input inputmode="decimal" type="number" id="svBuf" value="10" min="0" step="5"></div></div>'+
    '<div class="grid2"><div><label>Price ($)</label><input inputmode="decimal" type="number" id="svPrice" value="75" min="0" step="0.01"></div>'+
    '<div><label>Color</label><input type="color" id="svColor" value="#0f766e" style="min-height:42px"></div></div>'+
    '<div class="btnrow"><button class="btn" id="svAdd">Add service</button><button class="btn ghost hide" id="svCancelEdit">Cancel edit</button></div>'+
-   '<p class="small">Editing a service only affects future bookings — appointments already booked keep the price and duration they were booked at.</p></div>';
-  html+='<div class="card"><h2>💬 Reminder text templates</h2><div id="tpList"></div>'+
+   '<p class="small">Editing a service only affects future bookings — appointments already booked keep the price and duration they were booked at.</p></details></div>';
+  html+='<div class="card"><details class="bsx" data-keep="templates"'+(BS_OPEN.templates?" open":"")+'><summary style="font-size:17px;font-weight:700;cursor:pointer;min-height:44px;padding:6px 0">Message templates ▸ 💬 Reminder text templates</summary><div id="tpList"></div>'+
    '<h3>Add a template</h3><label>Name</label><input id="tpName">'+
    '<label>Text — placeholders: {name} {service} {date} {time} {business} {price} {deposit}</label>'+
    '<textarea id="tpBody" placeholder="Hi {name}, ..."></textarea>'+
    '<div class="btnrow"><button class="btn" id="tpAdd">Add template</button></div>'+
-   '<p class="small">BookedSolid works offline and cannot send messages itself. Open any appointment and tap "Copy text", then paste the filled-in message into your own texting app — it takes five seconds and keeps you off another subscription.</p></div>';
-  html+='<div class="card"><h2>🚀 Starter presets &amp; demo</h2>'+
+   '<p class="small">BookedSolid works offline and cannot send messages itself. Open any appointment and tap "Copy text", then paste the filled-in message into your own texting app — it takes five seconds and keeps you off another subscription.</p></details></div>';
+  html+='<div class="card"><details class="bsx" data-keep="presets"'+(BS_OPEN.presets?" open":"")+'><summary style="font-size:17px;font-weight:700;cursor:pointer;min-height:44px;padding:6px 0">Presets ▸ 🚀 Starter presets &amp; demo</summary>'+
    '<label>Load an industry starter set (adds its services; does not delete yours)</label>'+
    '<div class="grid2"><div><select id="psSel">'+Object.keys(PRESETS).map(k=>'<option value="'+k+'">'+esc(PRESETS[k].label)+"</option>").join("")+"</select></div>"+
    '<div><button class="btn secondary" id="psLoad" style="width:100%">Load preset services</button></div></div>'+
    '<div class="btnrow"><button class="btn ghost" id="dmLoad">Load demo data (mobile detailer)</button>'+
    '<button class="btn danger" id="dmClear">Clear demo data</button></div>'+
-   '<p class="small">"Clear demo data" removes ONLY the sample business, clients, appointments, waitlist entry and sample pack. Your real data is never touched by it.</p></div>';
+   '<p class="small">"Clear demo data" removes ONLY the sample business, clients, appointments, waitlist entry and sample pack. Your real data is never touched by it.</p></details></div>';
   html+='<div class="card"><h2>💾 Backup — your book is a file you own</h2>'+
    '<div class="btnrow"><button class="btn secondary" id="bkExport">Export backup (.json)</button></div>'+
    '<div class="btnrow"><button class="btn secondary" id="bkExportIcs" style="min-height:48px">📅 Export upcoming appointments (.ics for Google Calendar)</button></div>'+
@@ -1010,6 +1071,7 @@ function renderSettings(){
    "<p><b>Your data:</b> everything lives in this browser on this device. Export a backup weekly and keep it somewhere safe — if you clear your browser data without a backup, the book is gone.</p>"+
    '<p><a class="btn secondary" id="helpEmail" style="min-height:48px" href="mailto:whitewolfbackoffice@gmail.com?subject='+encodeURIComponent("BookedSolid help — v"+APP_VERSION)+"&body="+encodeURIComponent("Tell us what you were trying to do and what happened:\n\n")+'">✉️ Email us for help</a></p></div>';
   el.innerHTML=html;
+  el.querySelectorAll("details[data-keep]").forEach(d=>d.addEventListener("toggle",()=>{BS_OPEN[d.getAttribute("data-keep")]=d.open;}));
   let editingSvc=null;
   const resetSvcForm=()=>{editingSvc=null;$("#svFormTitle").textContent="Add a service";
     $("#svAdd").textContent="Add service";$("#svCancelEdit").classList.add("hide");
@@ -1151,7 +1213,7 @@ showTab("calendar");
     <p class="ww-sum">Your data stays on your device.<br>Estimates are aids, not guarantees.<br>You&#39;re responsible for checking outputs before you rely on them.</p>
     <p class="ww-follow">The full Terms and Disclaimer are one tap away, now and any time in Settings &#8594; Legal.</p>
     <button type="button" class="ww-btn" id="wwReadTerms">Read the full Terms</button>
-    <button type="button" class="ww-btn" id="wwReadDisc">Read the Estimator Disclaimer</button>
+    <button type="button" class="ww-btn" id="wwReadDisc">Read the Disclaimer</button>
     <label class="ww-check"><input type="checkbox" id="wwAgreeCheck"> <span>I have read the disclaimer and I agree to the Terms of Use</span></label>
     <button type="button" class="ww-btn ww-primary" id="wwAgree" disabled>I Agree</button>
   </div>
@@ -1162,10 +1224,10 @@ showTab("calendar");
     <h2>Legal</h2>
     <p class="ww-accept" id="wwAcceptLine">You have not recorded acceptance of the Terms yet.</p>
     <h3>Terms of Use</h3>
-    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Tree Service LLC, selling digital products under the name "White Wolf Digital"</strong> <strong>Contact: whitewolfoklahoma@gmail.com</strong></p>
+    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Apps</strong> <strong>Contact: whitewolfbackoffice@gmail.com</strong></p>
 <hr>
 <h4>1. What you're buying</h4>
-<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other titles sold under White Wolf Digital) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
+<p>Our apps (including LogEasy, ForgeKitchen, BranchMath, SnowBid, GrimeMath, RoofSquares, ProfitFlag, PastureLedger, and the other titles sold under White Wolf Apps) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
 <h4>2. Your license</h4>
 <ul>
 <li>You may use the app for your own personal or business work.</li>
@@ -1217,7 +1279,7 @@ showTab("calendar");
 <li>Nothing in these terms limits liability that cannot legally be limited.</li>
 </ul>
 <h4>8. Refunds</h4>
-<p>Refunds are handled <strong>by the storefront you bought from, under that storefront's policy</strong> — Gumroad's refund policy for Gumroad purchases, and Google Play's refund policy for Play purchases. These terms do not add to, replace, or override the storefront's refund rules. If a file is defective and won't open, contact us at whitewolfoklahoma@gmail.com and we'll fix or replace the file.</p>
+<p>Refunds are handled <strong>by the storefront you bought from, under that storefront's policy</strong> — Gumroad's refund policy for Gumroad purchases, and Google Play's refund policy for Play purchases. These terms do not add to, replace, or override the storefront's refund rules. If a file is defective and won't open, contact us at whitewolfbackoffice@gmail.com and we'll fix or replace the file.</p>
 <h4>9. Updates and changes to these terms</h4>
 <ul>
 <li>We may release updated versions of an app. Updates may add, change, or</li>
@@ -1233,10 +1295,10 @@ showTab("calendar");
 <h4>10. Governing law</h4>
 <p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA. (Attorney to confirm governing law and venue before publication.)</p>
 <h4>11. Contact</h4>
-<p>White Wolf Tree Service LLC (White Wolf Digital) — whitewolfoklahoma@gmail.com.</p>
+<p>White Wolf Apps — whitewolfbackoffice@gmail.com.</p>
 <hr>
 <h4>CONNECTED FEATURES — takes effect only when these features ship</h4>
-<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They do not apply to the current offline versions, which never transmit data.</em></p>
+<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in LogEasy). They do not apply to the current offline versions, which never transmit data.</em></p>
 <ul>
 <li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
 </ul>
@@ -1262,7 +1324,7 @@ showTab("calendar");
 </ul>
 <p>as Health Connect access or the microphone) at the moment you first use them. You can revoke permissions any time in your device settings; the related feature will simply stop working.</p>
     <h3>Estimator Disclaimer</h3>
-<p><strong>Applies to: TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, FieldForms Toolkit, PaintPro, FenceDeck, MarketMaker, and the other estimating/pricing tools sold under White Wolf Digital — including bundles that contain them.</strong></p>
+<p><strong>Applies to: BranchMath, SnowBid, GrimeMath, RoofSquares, ProfitFlag, PaperBoots, CoatMath, FenceDeck, PriceMyBooth, and the other estimating/pricing tools sold under White Wolf Apps — including bundles that contain them.</strong></p>
 <h4>Estimating aids, not finished quotes</h4>
 <ul>
 <li>These apps are <strong>estimating and record-keeping aids</strong>. Every bid, price,</li>
@@ -1282,9 +1344,9 @@ showTab("calendar");
 <p>snapshot). Changing your presets later does not change saved quotes — and a saved quote is still your responsibility to review before sending.</p>
 <h4>Specific tools</h4>
 <ul>
-<li><strong>TreeBid Pro:</strong> tree work is dangerous and site-specific. Difficulty</li>
+<li><strong>BranchMath:</strong> tree work is dangerous and site-specific. Difficulty</li>
 </ul>
-<p>factors and presets cannot see the actual tree, lean, rot, targets, or access. Inspect every job in person before final pricing. The "Invoice with Wave" feature is an open-and-paste handoff — TreeBid does not connect to Wave, and the invoice you send from Wave is yours.</p>
+<p>factors and presets cannot see the actual tree, lean, rot, targets, or access. Inspect every job in person before final pricing. The "Invoice with Wave" feature is an open-and-paste handoff — BranchMath does not connect to Wave, and the invoice you send from Wave is yours.</p>
 <ul>
 <li><strong>RoofSquares / measurement tools:</strong> confirm roof measurements and pitch</li>
 </ul>
@@ -1294,14 +1356,14 @@ showTab("calendar");
 </ul>
 <p>pricing vary by storm and site; seasonal contracts are your agreement with your customer, on your terms.</p>
 <ul>
-<li><strong>JobProfit Tracker:</strong> profit figures depend on the costs you enter.</li>
+<li><strong>ProfitFlag:</strong> profit figures depend on the costs you enter.</li>
 </ul>
 <p>The app is not accounting or tax software and does not replace your bookkeeper or accountant.</p>
 <h4>Bottom line</h4>
 <p>If an output and your judgment disagree, trust your judgment — then fix the input. We are not responsible for jobs won, lost, or mispriced based on app outputs, within the limits of the Terms of Use.</p>
     <h3>Privacy</h3>
     <p>This app has no accounts and collects no data. Everything you enter is stored only on your device, in your browser/app storage, and is never uploaded, transmitted, or shared. We never see your data. Files you export (backups, quotes, PDFs) are under your control &mdash; store and send them only where you choose. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so export backups regularly.</p>
-    <p class="ww-seller">Sold by White Wolf Tree Service LLC (White Wolf Digital) &mdash; whitewolfoklahoma@gmail.com</p>
+    <p class="ww-seller">Sold by White Wolf Apps &mdash; whitewolfbackoffice@gmail.com</p>
   </div>
 </div>
 
