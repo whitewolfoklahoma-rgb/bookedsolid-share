@@ -114,8 +114,9 @@ footer{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); 
 </head>
 <body>
 <header class="top">
+  <div class="mark">📅</div>
   <div>
-    <div class="logo">📅 BookedSolid</div>
+    <div class="logo">BookedSolid</div>
     <div class="biz" id="hdrBiz">Your appointment book</div>
   </div>
   <div class="tag">Offline · No subscription · Your data stays yours</div>
@@ -123,13 +124,13 @@ footer{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); 
 <div style="text-align:center;padding:12px 16px;background:#fff8e6;border-bottom:2px solid #e8a13a;"><a href="https://travisbriggs.gumroad.com/l/mlfogb" target="_blank" rel="noopener" style="display:inline-block;background:#e8a13a;color:#1d2b2e;font-weight:800;font-size:17px;padding:10px 22px;border-radius:8px;text-decoration:none;">Get the full version — $79</a></div>
 
 <nav class="tabs" id="tabBar">
-  <button data-tab="calendar" class="active">Calendar</button>
-  <button data-tab="book">+ Book</button>
-  <button data-tab="clients">Clients</button>
-  <button data-tab="waitlist">Waitlist</button>
-  <button data-tab="money">Money</button>
-  <button data-tab="packs">Packs</button>
-  <button data-tab="settings">Settings &amp; Help</button>
+  <button data-tab="calendar" class="active"><span class="ic">🗓️</span><span class="lb">Calendar</span></button>
+  <button data-tab="book"><span class="ic">➕</span><span class="lb">+ Book</span></button>
+  <button data-tab="clients"><span class="ic">👥</span><span class="lb">Clients</span></button>
+  <button data-tab="waitlist"><span class="ic">⏳</span><span class="lb">Waitlist</span></button>
+  <button data-tab="money"><span class="ic">💵</span><span class="lb">Money</span></button>
+  <button data-tab="packs"><span class="ic">📦</span><span class="lb">Packs</span></button>
+  <button data-tab="settings"><span class="ic">⚙️</span><span class="lb">Settings &amp; Help</span></button>
 </nav>
 <main>
   <section id="view-calendar"></section>
@@ -142,7 +143,7 @@ footer{max-width:980px; margin:0 auto; padding:0 12px 30px; color:var(--muted); 
 </main>
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
-<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.<br><b>BookedSolid v1.1.3</b>
+<footer>BookedSolid works 100% offline. Everything is stored in this browser on this device — export a backup from Settings regularly. Deposits and payments are <b>recorded</b> in the app, never collected or processed by it.<br><b>BookedSolid v1.2.0</b>
 <div style="margin-top:6px">Works with: <a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/branchmath-share/" target="_blank" rel="noopener">Bid the job — BranchMath</a><a class="xlink" href="https://whitewolfoklahoma-rgb.github.io/treefinder-share/" target="_blank" rel="noopener">Find tree jobs — TreeFinder</a></div></footer>
 <script>
 "use strict";
@@ -370,7 +371,7 @@ function fitWaitlist(freed){
    Google Calendar with everything already filled in. The user taps Save
    there. All times are built from the appointment's local date/time on the
    user's device and converted to UTC. */
-const APP_VERSION="1.1.3";
+const APP_VERSION="1.2.0";
 function fmtUTC(d){return d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z");}
 function apptStartDt(a){const p=String(a.date||"").split("-");const t=String(a.start||"09:00").split(":");
   return new Date(+p[0],(+p[1]||1)-1,+p[2]||1,+t[0]||0,+t[1]||0);}
@@ -1204,11 +1205,52 @@ showTab("calendar");
 @media print{#wwLegalOverlay,#wwLegalPanel,[data-ww-legal-card]{display:none!important}}
 </style>
 
+<style id="bsRedesign">
+/* ===== BookedSolid v1.2.0 — modern app look (catalog redesign wave 2, presentation only) ===== */
+:root{--radius:16px;--shadow:0 2px 6px rgba(13,46,43,.07),0 10px 26px rgba(13,46,43,.08);--bar-h:64px}
+body{padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom) + 20px)}
+header.top{background:linear-gradient(135deg,#0b4f4a,#115e59 55%,#0f766e);box-shadow:0 2px 12px rgba(11,79,74,.35);padding:12px 14px}
+header.top .mark{flex:0 0 auto;width:50px;height:50px;border-radius:15px;background:linear-gradient(145deg,#fbbf24,#d97706);display:flex;align-items:center;justify-content:center;font-size:27px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 3px 8px rgba(0,0,0,.25)}
+header.top .logo{font-size:21px}
+nav.tabs{position:fixed;top:auto;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid var(--line);border-bottom:none;box-shadow:0 -3px 16px rgba(13,46,43,.12);padding:6px 8px calc(6px + env(safe-area-inset-bottom));overflow-x:visible;gap:2px}
+nav.tabs button{flex:1 1 0;min-width:0;background:none;border:none;color:var(--muted);padding:4px 1px 5px;border-radius:14px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;box-shadow:none}
+nav.tabs button .ic{font-size:20px;line-height:1.15;padding:3px 11px;border-radius:999px;transition:background .15s}
+nav.tabs button .lb{font-size:10.5px;letter-spacing:.1px;line-height:1.15;text-align:center}
+nav.tabs button.active{background:none;color:var(--brand2)}
+nav.tabs button.active .ic{background:var(--accent);box-shadow:0 2px 6px rgba(245,158,11,.5)}
+main>section:not(.hide){animation:bsTabIn .28s ease both}
+@keyframes bsTabIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{border-radius:16px;box-shadow:var(--shadow);padding:16px}
+.appt{border-radius:14px;box-shadow:var(--shadow)}
+.weekcol,.mcell,.kpi .k,.closed{border-radius:14px;box-shadow:var(--shadow)}
+.btn{border-radius:999px;min-height:48px;padding:10px 18px}
+.btn.small{border-radius:999px}
+.gcal,.xlink{border-radius:999px}
+input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:12px;min-height:48px}
+.seg{border-radius:999px}
+.seg button{min-height:44px}
+.warnbox,.errbox,.okbox{border-radius:14px}
+.modal .box{border-radius:20px 20px 0 0}
+.toast{bottom:calc(var(--bar-h) + env(safe-area-inset-bottom) + 16px)}
+#wwLegalOverlay{background:rgba(8,30,27,.78)}
+.ww-card{border-radius:22px;padding:26px 20px 22px;box-shadow:0 18px 44px rgba(0,0,0,.4)}
+.ww-card .gicon{font-size:62px;text-align:center;line-height:1.1}
+.ww-appname{text-align:center}
+.ww-card h2{text-align:center}
+.gwelcome{text-align:center;color:#5b6472;margin:0 0 6px;font-size:15px;line-height:1.45}
+.ww-btn{border-radius:999px}
+.ww-btn.ww-primary{background:var(--brand);border-color:var(--brand);min-height:56px;font-size:17.5px}
+.ww-check input{accent-color:var(--brand)}
+@media print{nav.tabs{display:none !important}body{padding-bottom:0}}
+</style>
+
 <!-- ===== White Wolf Legal Pattern v1.0 ===== -->
 <div id="wwLegalOverlay" hidden>
   <div class="ww-card" role="dialog" aria-modal="true" aria-labelledby="wwLegalTitle">
+    <div class="gicon">📅</div>
     <div class="ww-appname">BookedSolid</div>
     <h2 id="wwLegalTitle">Terms of Use</h2>
+    <p class="gwelcome">Welcome to BookedSolid — your appointment book that warns you before you double-book.</p>
     <p class="ww-updated" id="wwUpdatedNote" hidden>Our terms were updated (v1.0).</p>
     <p class="ww-sum">Your data stays on your device.<br>Estimates are aids, not guarantees.<br>You&#39;re responsible for checking outputs before you rely on them.</p>
     <p class="ww-follow">The full Terms and Disclaimer are one tap away, now and any time in Settings &#8594; Legal.</p>
